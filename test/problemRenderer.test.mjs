@@ -100,6 +100,8 @@ test('ProblemRenderer renders split-combine interactive visual', () => {
   const markup = renderToStaticMarkup(
     React.createElement(ProblemRenderer, {
       problem: {
+        num1: 5,
+        num2: 3,
         operator: '-',
         visual: {
           type: 'interactive',
@@ -112,6 +114,8 @@ test('ProblemRenderer renders split-combine interactive visual', () => {
   );
 
   assert.equal(markup.includes('split-zone'), true);
+  assert.equal(markup.includes('problem-text'), true);
+  assert.equal(markup.includes('5 - 3'), true);
   assert.equal((markup.match(/split-item/g) || []).length, 1);
 });
 
@@ -119,6 +123,8 @@ test('ProblemRenderer renders base-10 interactive visual', () => {
   const markup = renderToStaticMarkup(
     React.createElement(ProblemRenderer, {
       problem: {
+        num1: 20,
+        num2: 5,
         operator: '+',
         visual: {
           type: 'interactive',
@@ -131,6 +137,8 @@ test('ProblemRenderer renders base-10 interactive visual', () => {
   );
 
   assert.equal(markup.includes('base10-tens-wrap'), true);
+  assert.equal(markup.includes('problem-text'), true);
+  assert.equal(markup.includes('20 + 5'), true);
   assert.equal((markup.match(/base10-tens-item/g) || []).length, 1);
 });
 
@@ -138,6 +146,8 @@ test('ProblemRenderer renders fraction-cut interactive visual', () => {
   const markup = renderToStaticMarkup(
     React.createElement(ProblemRenderer, {
       problem: {
+        num1: 1,
+        num2: 2,
         operator: '+',
         visual: {
           type: 'interactive',
@@ -151,6 +161,8 @@ test('ProblemRenderer renders fraction-cut interactive visual', () => {
   );
 
   assert.equal(markup.includes('fraction-stage'), true);
+  assert.equal(markup.includes('problem-text'), true);
+  assert.equal(markup.includes('1 + 2'), true);
   assert.equal(markup.includes('조각 자르기'), true);
 });
 

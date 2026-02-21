@@ -139,16 +139,44 @@ export const ProblemRenderer = ({ problem }) => {
 
   if (problem.visual.type === 'interactive') {
     const seed = problem.seed || problem.visual.seed;
+    const num1Text = Number.isFinite(Number(problem?.num1))
+      ? Number(problem.num1)
+      : '?';
+    const num2Text = Number.isFinite(Number(problem?.num2))
+      ? Number(problem.num2)
+      : '?';
+    const operatorText = String(problem?.operator || '+');
+    const renderFormula = (
+      <p className="problem-text">
+        {num1Text} {operatorText} {num2Text} = ?
+      </p>
+    );
+
     if (problem.visual.subType === 'split-combine') {
-      return <ManipulativeSplitCombine visual={problem.visual} seed={seed} />;
+      return (
+        <>
+          {renderFormula}
+          <ManipulativeSplitCombine visual={problem.visual} seed={seed} />
+        </>
+      );
     }
 
     if (problem.visual.subType === 'base-10-blocks') {
-      return <ManipulativeBase10 visual={problem.visual} seed={seed} />;
+      return (
+        <>
+          {renderFormula}
+          <ManipulativeBase10 visual={problem.visual} seed={seed} />
+        </>
+      );
     }
 
     if (problem.visual.subType === 'fraction-cuts') {
-      return <ManipulativeFractionCuts visual={problem.visual} seed={seed} />;
+      return (
+        <>
+          {renderFormula}
+          <ManipulativeFractionCuts visual={problem.visual} seed={seed} />
+        </>
+      );
     }
   }
 

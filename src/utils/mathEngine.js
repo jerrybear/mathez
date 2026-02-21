@@ -64,6 +64,10 @@ const isAdditionTopic = (topic) => String(topic || '') === 'addition';
 const isSubtractionTopic = (topic) => String(topic || '') === 'subtraction';
 const isBorrowTopic = (topic) => String(topic || '') === 'subtraction-borrow';
 const isCarryTopic = (topic) => String(topic || '') === 'addition-carry';
+const isBasicLevel1Chapter = (chapterId = '') => {
+  const normalizedChapterId = String(chapterId || '').toLowerCase();
+  return normalizedChapterId.startsWith('c01') || normalizedChapterId.startsWith('c02');
+};
 
 const shouldUseSplitCombine = (topic, operation, level) => (
   (isAdditionTopic(topic) || isSubtractionTopic(topic))
@@ -91,19 +95,21 @@ const topicHasVisualSupport = (topic, chapterTitle = '') => [
 
 const pickRandom = (items) => items[randomInt(0, items.length - 1)];
 
-const generateAdditionProblem = (level, topic = '') => {
+const generateAdditionProblem = (level, topic = '', chapterId = '') => {
   const safeLevel = clampLevel(level);
   const normalizedTopic = String(topic || '');
+  const isBasicChapter = safeLevel === 1 && isBasicLevel1Chapter(chapterId);
+  const minValue = isBasicChapter ? 1 : 0;
 
   if (safeLevel === 1) {
     for (let i = 0; i < 100; i += 1) {
-      const num1 = randomInt(0, 9);
-      const num2 = randomInt(0, 9);
+      const num1 = randomInt(minValue, 9);
+      const num2 = randomInt(minValue, 9);
       if (num1 + num2 <= 9) {
         return { num1, num2 };
       }
     }
-    return { num1: 4, num2: 4 };
+    return { num1: minValue || 4, num2: isBasicChapter ? 3 : 4 };
   }
 
   if (safeLevel === 2) {
@@ -165,19 +171,21 @@ const generateAdditionProblem = (level, topic = '') => {
   };
 };
 
-const generateSubtractionProblem = (level, topic = '') => {
+const generateSubtractionProblem = (level, topic = '', chapterId = '') => {
   const safeLevel = clampLevel(level);
   const normalizedTopic = String(topic || '');
+  const isBasicChapter = safeLevel === 1 && isBasicLevel1Chapter(chapterId);
+  const minValue = isBasicChapter ? 1 : 0;
 
   if (safeLevel === 1) {
     for (let i = 0; i < 100; i += 1) {
-      const num1 = randomInt(0, 9);
-      const num2 = randomInt(0, 9);
+      const num1 = randomInt(minValue, 9);
+      const num2 = randomInt(minValue, 9);
       if (num1 >= num2) {
         return { num1, num2 };
       }
     }
-    return { num1: 7, num2: 3 };
+    return { num1: isBasicChapter ? 3 : 7, num2: isBasicChapter ? 1 : 3 };
   }
 
   if (safeLevel === 2) {
@@ -403,9 +411,11 @@ const buildSplitCombineVisual = (topic = '', level = 1, operation = '+', num1 = 
   const safeLevel = clampLevel(level);
   const safeOperation = String(operation || '+');
   const normalizedTopic = String(topic || '');
+  const safeNum1 = Number.isFinite(num1) ? Math.max(0, Math.round(num1)) : 0;
+  const safeNum2 = Number.isFinite(num2) ? Math.max(0, Math.round(num2)) : 0;
   const totalCount = safeOperation === '-'
-    ? normalizeVisualSeed(num1)
-    : normalizeVisualSeed(num1 + num2);
+    ? normalizeVisualSeed(safeNum1)
+    : normalizeVisualSeed(safeNum1 + safeNum2);
 
   return {
     type: 'interactive',
@@ -415,11 +425,11 @@ const buildSplitCombineVisual = (topic = '', level = 1, operation = '+', num1 = 
     level: safeLevel,
     target: '🍎',
     totalCount: Math.max(2, Math.min(24, Math.max(totalCount, 2))),
-    leftAmount: Math.max(0, normalizeVisualSeed(num1)),
-    rightAmount: Math.max(0, normalizeVisualSeed(num2)),
+    leftAmount: safeNum1,
+    rightAmount: safeNum2,
     prompt: safeOperation === '-'
-      ? `전체 ${safeLevel}학년은 빼기에서 보조적으로 떼어내는 흐름을 확인해요.`
-      : '덧셈에서 가르기/모으기를 통해 개수를 눈으로 확인해요.',
+      ? `${safeNum1}에서 ${safeNum2}를 빼면 몇 개가 남을까요?`
+      : `${safeNum1}과 ${safeNum2}를 모으면 몇 개가 될까요?`,
     seed: String(seed || ''),
     isInteractive: true
   };
@@ -542,6 +552,7 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
   const safeOp = ['+', '-', '*', '/'].includes(operation) ? operation : '+';
   const topic = String(options?.topic || '');
   const chapterTitle = String(options?.chapterTitle || '');
+  const chapterId = String(options?.chapterId || '');
 
   const operationGenerators = {
     '+': generateAdditionProblem,
@@ -550,7 +561,7 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
     '/': generateDivisionProblem
   };
 
-  const generated = operationGenerators[safeOp](safeLevel, topic);
+  const generated = operationGenerators[safeOp](safeLevel, topic, chapterId);
   const { num1 = 0, num2 = 0, answer: explicitAnswer } = generated || {};
 
   let answer = 0;

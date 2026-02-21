@@ -56,10 +56,37 @@ const SplitItem = ({
 export const ManipulativeSplitCombine = ({ visual = {}, seed = '' }) => {
   const safeSeed = `${parseSeed(visual)}-${seed}`;
   const totalCount = clampPositiveInteger(visual?.totalCount, 1);
+  const operationName = String(visual?.operation || '+');
+  const safeOperation = String(visual?.operation || '+');
+  const isMergeMode = safeOperation === '+';
+  const maxTotal = Math.max(totalCount, 0);
+  const initialLeft = Math.max(0, Math.round(Number(visual?.leftAmount || 0)));
+  const initialRight = Math.max(0, Math.round(Number(visual?.rightAmount || 0)));
+  const normalizedLeft = Math.min(initialLeft, maxTotal);
+  const normalizedRight = Math.min(initialRight, Math.max(0, maxTotal - normalizedLeft));
+  const getInitialPositions = () => {
+    const plateACount = isMergeMode ? normalizedLeft : 0;
+    const plateBCount = isMergeMode ? normalizedRight : 0;
+    const sourceCount = Math.max(0, totalCount - plateACount - plateBCount);
+    const positions = [];
+
+    for (let i = 0; i < plateACount; i += 1) {
+      positions.push('plate-a');
+    }
+    for (let i = 0; i < plateBCount; i += 1) {
+      positions.push('plate-b');
+    }
+    for (let i = 0; i < sourceCount; i += 1) {
+      positions.push('source');
+    }
+
+    return positions;
+  };
+
   const [items, setItems] = useState(() => {
-    return Array.from({ length: totalCount }, (_, index) => ({
+    return getInitialPositions().map((position, index) => ({
       id: `item-${index + 1}`,
-      position: 'source'
+      position
     }));
   });
 
@@ -84,11 +111,14 @@ export const ManipulativeSplitCombine = ({ visual = {}, seed = '' }) => {
   };
 
   useEffect(() => {
-    setItems(Array.from({ length: totalCount }, (_, index) => ({
-      id: `item-${index + 1}`,
-      position: 'source'
-    })));
-  }, [totalCount, safeSeed]);
+    const nextPositions = getInitialPositions();
+    setItems(
+      nextPositions.map((position, index) => ({
+        id: `item-${index + 1}`,
+        position
+      }))
+    );
+  }, [totalCount, normalizedLeft, normalizedRight, safeSeed, isMergeMode]);
 
   useEffect(() => () => {
     const listenerState = touchDragRef.current.listeners;
@@ -263,30 +293,16 @@ export const ManipulativeSplitCombine = ({ visual = {}, seed = '' }) => {
   return (
     <div className="manipulative-card">
       <p className="visual-caption">{visual.prompt || '가르기/모으기 조작 연습'}</p>
-      <div className="manipulative-subtitle">🍎 과일을 드래그해 접시에 옮겨 보거나, 과일을 탭해 이동해보세요.</div>
-
-      <div className="split-zone split-source">
-        <p className="split-zone-label">전체 ({sourceCount})</p>
-        <div
-          ref={sourceZoneRef}
-          className="split-zone-area split-source-area"
-          onDragOver={handleDragOver}
-          onDrop={(event) => handleDrop('source')(event)}
-        >
-          {sourceItems.map((item) => (
-            <SplitItem
-              key={item.id}
-              id={item.id}
-              visual={visual}
-              position={item.position}
-              seed={safeSeed}
-              onPointerDownItem={handleTouchPointerDown}
-              onDragStart={handleDragStart}
-              onTapItem={toggleItem}
-              className={bouncedId === item.id ? 'bounce' : ''}
-            />
-          ))}
-        </div>
+      <div className="manipulative-subtitle">
+        {operationName === '+' ? (
+          <>
+            🍎 위쪽의 접시 A/B에 나뉜 과일을 확인하고, 아래쪽 전체로 옮기며 모아보는 연습이에요.
+          </>
+        ) : (
+          <>
+            🍎 아래쪽 전체에서 과일을 위쪽 접시로 옮겨 보거나, 과일을 탭해 분리 연습을 해보세요.
+          </>
+        )}
       </div>
 
       <div className="split-zone-row">
@@ -338,6 +354,30 @@ export const ManipulativeSplitCombine = ({ visual = {}, seed = '' }) => {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      <div className="split-zone split-source">
+        <p className="split-zone-label">전체 ({sourceCount})</p>
+        <div
+          ref={sourceZoneRef}
+          className="split-zone-area split-source-area"
+          onDragOver={handleDragOver}
+          onDrop={(event) => handleDrop('source')(event)}
+        >
+          {sourceItems.map((item) => (
+            <SplitItem
+              key={item.id}
+              id={item.id}
+              visual={visual}
+              position={item.position}
+              seed={safeSeed}
+              onPointerDownItem={handleTouchPointerDown}
+              onDragStart={handleDragStart}
+              onTapItem={toggleItem}
+              className={bouncedId === item.id ? 'bounce' : ''}
+            />
+          ))}
         </div>
       </div>
     </div>

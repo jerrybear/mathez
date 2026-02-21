@@ -96,7 +96,7 @@ test('generateProblem returns shape visual payload for shape topics', () => {
 test('generateProblem returns split-combine visual for level1 addition topics', () => {
   const result = generateProblem(1, '+', {
     topic: 'addition',
-    chapterId: 'c01-add',
+    chapterId: 'c01-add-basics',
     chapterTitle: '덧셈'
   });
 
@@ -105,6 +105,36 @@ test('generateProblem returns split-combine visual for level1 addition topics', 
   assert.equal(result.visual?.topic, 'addition');
   assert.equal(result.visual?.level, 1);
   assert.equal(result.visual?.totalCount, result.num1 + result.num2);
+});
+
+test('c01/c02 level1 basic chapters avoid zero values', () => {
+  const c01Addition = generateProblem(1, '+', {
+    topic: 'addition',
+    chapterId: 'c01-add-basics',
+    chapterTitle: '9까지의 수'
+  });
+  const c02Subtraction = generateProblem(1, '-', {
+    topic: 'subtraction',
+    chapterId: 'c02-sub-basics',
+    chapterTitle: '덧셈과 뺄셈'
+  });
+
+  assert.ok(c01Addition.num1 >= 1);
+  assert.ok(c01Addition.num2 >= 1);
+  assert.ok(c01Addition.num1 + c01Addition.num2 <= 9);
+  assert.ok(c02Subtraction.num1 >= 1);
+  assert.ok(c02Subtraction.num2 >= 1);
+  assert.ok(c02Subtraction.num1 >= c02Subtraction.num2);
+});
+
+test('split-combine prompt shows concrete numeric operands', () => {
+  const result = generateProblem(1, '+', {
+    topic: 'addition',
+    chapterId: 'c01-add-basics',
+    chapterTitle: '9까지의 수'
+  });
+
+  assert.equal(result.visual?.prompt.includes(`${result.num1}과 ${result.num2}를 모으면`), true);
 });
 
 test('generateProblem returns base-10 blocks visual for level2 carry/borrow topics', () => {
