@@ -83,6 +83,9 @@ const formatDivideHint = (num1, num2, step) => {
 
 const buildLearningHint = (problem, wrongAttempts) => {
   if (wrongAttempts <= 0) return null;
+  if (problem?.visual) {
+    return '그림의 관계를 다시 보고 정답과 가장 가까운 값을 찾아보세요.';
+  }
 
   const step = clampHintStep(wrongAttempts);
   const { num1, num2, operator } = problem;

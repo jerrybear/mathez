@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import curriculumCatalog, { getCurriculumById } from '../src/data/curriculum.js';
 
 const inRange = (value, min, max) => value >= min && value <= max;

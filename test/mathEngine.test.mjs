@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import {
   generateProblem,
   generateRandomProblem,
@@ -222,4 +222,23 @@ test('generateSimilarProblem for division preserves integer division result', ()
   assert.equal(next.operator, '/');
   assert.equal(next.num1 % next.num2, 0);
   assert.equal(next.answer, next.num1 / next.num2);
+});
+
+test('generateProblem returns measurement-length visual payload for measurement topic', () => {
+  const leftRandom = (2 - 2) / 8; // 0 => 2
+  const rightRandom = (9 - 2) / 8; // 0.875 => 9
+  const result = withMockRandom([leftRandom, rightRandom], () => generateProblem(2, '+', {
+    topic: 'measurement-length',
+    chapterId: 'c11-measure-length',
+    chapterTitle: '길이 재기'
+  }));
+
+  assert.equal(result.visual.type, 'measurement-length');
+  assert.equal(result.num1, 0);
+  assert.equal(result.num2, 0);
+  assert.equal(result.topic, 'measurement-length');
+  assert.ok(Array.isArray(result.visual.items));
+  assert.equal(result.visual.items.length, 2);
+  assert.equal(result.visual.items.every((entry) => entry.label && Number.isFinite(entry.value)), true);
+  assert.equal(result.answer, Math.abs(result.visual.items[0].value - result.visual.items[1].value));
 });

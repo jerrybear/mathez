@@ -1,23 +1,33 @@
 import React from 'react';
 
-const shuffleArray = (values) => {
-  const next = [...values];
-  for (let i = next.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j], next[i]];
+const toSeedNumber = (raw) => {
+  const source = String(raw ?? '');
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash >>>= 0;
+    hash *= 16777619;
+    hash >>>= 0;
   }
-  return next;
+  return hash;
+};
+
+const deterministicRange = (seed, min, max) => {
+  const span = max - min;
+  return (toSeedNumber(seed) % (span + 1)) + min;
 };
 
 export const ShapeGroup = ({ visual }) => {
   const target = visual?.target || '🔺';
-  const items = shuffleArray(Array.isArray(visual?.items) ? visual.items : []);
+  const items = Array.isArray(visual?.items) ? visual.items : [];
 
   const shapeCells = items.map((item, index) => {
-    const left = `${Math.floor(Math.random() * 83) + 6}%`;
-    const top = `${Math.floor(Math.random() * 71) + 12}%`;
-    const offsetX = (Math.random() * 34) - 17;
-    const offsetY = (Math.random() * 24) - 12;
+    const left = `${deterministicRange(`${item}-${index}-left`, 6, 89)}%`;
+    const top = `${deterministicRange(`${item}-${index}-top`, 12, 82)}%`;
+    const offsetX = deterministicRange(`${item}-${index}-offset-x`, -17, 17);
+    const offsetY = deterministicRange(`${item}-${index}-offset-y`, -12, 12);
+    const floatDelay = deterministicRange(`${item}-${index}-float-delay`, 0, 1800) / 1000;
+    const floatDuration = deterministicRange(`${item}-${index}-float-duration`, 2800, 4200) / 1000;
 
     return (
       <span
@@ -28,8 +38,8 @@ export const ShapeGroup = ({ visual }) => {
           top,
           '--offset-x': `${offsetX}px`,
           '--offset-y': `${offsetY}px`,
-          '--float-delay': `${(Math.random() * 1.8).toFixed(2)}s`,
-          '--float-duration': `${(2.8 + Math.random() * 1.4).toFixed(2)}s`
+          '--float-delay': `${floatDelay.toFixed(2)}s`,
+          '--float-duration': `${floatDuration.toFixed(2)}s`
         }}
       >
         {item}
@@ -90,6 +100,31 @@ export const SimpleBarChart = ({ visual = {} }) => {
   );
 };
 
+export const MeasurementLength = ({ visual = {} }) => {
+  const items = Array.isArray(visual.items) ? visual.items : [];
+  const maxValue = Math.max(2, ...items.map((item) => Number(item?.value || 2)));
+
+  return (
+    <div className="measurement-wrap">
+      <p className="visual-caption">{visual.question || '길이 차이를 비교해 보세요.'}</p>
+      <div className="measurement-track">
+        {items.map((item, index) => (
+          <div key={`${item?.label}-${index}`} className="measure-item">
+            <span className="measure-label">{item?.label || `물체 ${index + 1}`}</span>
+            <div
+              className="measure-bar"
+              style={{
+                width: `${Math.round((Number(item?.value || 0) / maxValue) * 100)}%`
+              }}
+            />
+            <span className="bar-value">{item?.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ProblemRenderer = ({ problem }) => {
   if (!problem) return null;
 
@@ -100,6 +135,7 @@ export const ProblemRenderer = ({ problem }) => {
   if (problem.visual.type === 'count-shapes') return <ShapeGroup visual={problem.visual} />;
   if (problem.visual.type === 'clock-reading') return <AnalogClock time={problem.visual.time} />;
   if (problem.visual.type === 'chart-bar') return <SimpleBarChart visual={problem.visual} />;
+  if (problem.visual.type === 'measurement-length') return <MeasurementLength visual={problem.visual} />;
 
   return null;
 };

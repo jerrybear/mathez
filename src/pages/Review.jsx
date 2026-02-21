@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import Keypad from '../components/ui/Keypad';
@@ -14,17 +14,13 @@ const formatDate = (value) => {
 };
 
 const Review = () => {
-  const [wrongProblems, setWrongProblems] = useState([]);
+  const [wrongProblems, setWrongProblems] = useState(() => getWrongProblems('latest'));
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [reviewProblem, setReviewProblem] = useState(null);
   const [input, setInput] = useState('');
   const [isWrong, setIsWrong] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
-
-  useEffect(() => {
-    setWrongProblems(getWrongProblems('latest'));
-  }, []);
 
   const selectProblem = (problem) => {
     const next = generateSimilarProblem(problem);

@@ -32,17 +32,30 @@ const isThreeDigitTopic = (topic) => topic === 'three-digit';
 const isFourDigitTopic = (topic) => topic === 'four-digit';
 const isFractionOrDecimalTopic = (topic) => topic === 'fraction-decimal';
 const isShapeTopic = (topic) => ['shapes', 'geometry-figures', 'circle'].includes(topic);
+const isCompareTopic = (topic) => topic === 'compare';
+const isMeasurementLengthTopic = (topic) => topic === 'measurement-length';
+const isDataTopic = (topic) => topic === 'data';
 const isClockTopic = (topic, title = '') => {
   const normalized = String(topic || '').toLowerCase();
   const normalizedTitle = String(title || '').toLowerCase();
   return normalized === 'clock-reading'
     || normalized === 'time'
     || normalized === 'clock'
+    || normalized === 'time-track'
+    || normalized === 'clockreading'
     || normalized === 'subtraction-borrow'
     || normalizedTitle.includes('시계')
+    || normalizedTitle.includes('시각')
     || normalizedTitle.includes('시간');
 };
-const isDataTopic = (topic) => topic === 'data';
+
+const topicHasVisualSupport = (topic, chapterTitle = '') => [
+  isShapeTopic(topic),
+  isCompareTopic(topic),
+  isMeasurementLengthTopic(topic),
+  isClockTopic(topic, chapterTitle),
+  isDataTopic(topic)
+].some(Boolean);
 
 const pickRandom = (items) => items[randomInt(0, items.length - 1)];
 
@@ -328,15 +341,47 @@ const buildDataVisual = () => {
   };
 };
 
+const buildMeasurementVisual = () => {
+  const left = {
+    label: '연필',
+    value: randomInt(2, 9)
+  };
+  const right = {
+    label: '지우개',
+    value: randomInt(2, 9)
+  };
+  if (left.value === right.value) {
+    right.value = left.value > 4 ? left.value - 1 : left.value + 1;
+  }
+
+  const isLeftLonger = left.value > right.value;
+  const longerItem = isLeftLonger ? left : right;
+  const shorterItem = isLeftLonger ? right : left;
+  const question = `${longerItem.label}은(는) ${shorterItem.label}보다 얼마나 더 긴가요?`;
+
+  return {
+    type: 'measurement-length',
+    items: [left, right],
+    question,
+    answer: Math.abs(left.value - right.value)
+  };
+};
+
 const buildVisualProblem = (topic, title = '', operation = '+') => {
   const shapeTopic = isShapeTopic(topic);
+  const compareTopic = isCompareTopic(topic);
+  const measurementTopic = isMeasurementLengthTopic(topic);
   const clockTopic = isClockTopic(topic, title);
   const dataTopic = isDataTopic(topic);
+  const hasVisual = topicHasVisualSupport(topic, title);
+  if (!hasVisual) return null;
 
-  if (shapeTopic || dataTopic || clockTopic) {
-    const visual = shapeTopic ? buildShapeVisual()
-      : clockTopic ? buildClockVisual()
-        : buildDataVisual();
+  if (shapeTopic || dataTopic || clockTopic || compareTopic || measurementTopic) {
+    const visual = compareTopic ? buildDataVisual()
+      : measurementTopic ? buildMeasurementVisual()
+        : shapeTopic ? buildShapeVisual()
+          : clockTopic ? buildClockVisual()
+            : buildDataVisual();
 
     const answer = visual.answer;
 

@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'mathez_wrong_notes';
+let attemptSequence = 0;
 
 const readStorage = () => {
   if (typeof window === 'undefined' || !window.localStorage) return [];
@@ -43,6 +44,7 @@ const normalizeProblem = (problem) => {
 
   const safeLevel = Math.max(1, Math.min(4, Math.round(Number(level))));
   const now = lastAttempt || new Date().toISOString();
+  attemptSequence += 1;
 
   return {
     id: String(id || Date.now()),
@@ -52,7 +54,8 @@ const normalizeProblem = (problem) => {
     answer: Number(answer),
     level: safeLevel,
     failCount: Number.isFinite(Number(failCount)) ? Math.max(1, Math.round(Number(failCount))) : 1,
-    lastAttempt: now
+    lastAttempt: now,
+    _attemptOrder: attemptSequence
   };
 };
 
@@ -64,17 +67,20 @@ export const saveWrongProblem = (problem) => {
   const idx = current.findIndex((item) => item.num1 === next.num1 && item.num2 === next.num2 && item.operator === next.operator);
 
   if (idx >= 0) {
+    const nextAttempt = (Number(current[idx]._attemptOrder) || 0) + 1;
     current[idx] = {
       ...current[idx],
       failCount: Number(current[idx].failCount || 0) + 1,
-      lastAttempt: next.lastAttempt
+      lastAttempt: next.lastAttempt,
+      _attemptOrder: nextAttempt
     };
   } else {
     current.push({
       ...next,
       failCount: 1,
       lastAttempt: next.lastAttempt,
-      answer: next.answer
+      answer: next.answer,
+      _attemptOrder: attemptSequence
     });
   }
 
@@ -87,13 +93,27 @@ export const getWrongProblems = (sortBy = 'latest') => {
 
   const sorted = [...current].sort((a, b) => {
     if (sortBy === 'failCount') {
-      if ((b.failCount || 0) !== (a.failCount || 0)) {
-        return (b.failCount || 0) - (a.failCount || 0);
+      const bFail = b.failCount || 0;
+      const aFail = a.failCount || 0;
+      if (bFail !== aFail) {
+        return bFail - aFail;
+      }
+
+      const bAttempt = Number(b._attemptOrder || 0);
+      const aAttempt = Number(a._attemptOrder || 0);
+      if (bAttempt !== aAttempt) {
+        return bAttempt - aAttempt;
       }
       return new Date(b.lastAttempt || 0).getTime() - new Date(a.lastAttempt || 0).getTime();
     }
 
-    return new Date(b.lastAttempt || 0).getTime() - new Date(a.lastAttempt || 0).getTime();
+    const bTime = new Date(b.lastAttempt || 0).getTime();
+    const aTime = new Date(a.lastAttempt || 0).getTime();
+    if (bTime !== aTime) {
+      return bTime - aTime;
+    }
+
+    return Number(b._attemptOrder || 0) - Number(a._attemptOrder || 0);
   });
 
   return sorted;
