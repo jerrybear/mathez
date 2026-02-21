@@ -10,11 +10,9 @@ import curriculumCatalog, { getCurriculumById } from '../data/curriculum';
 import { getLearningProgressMap, getLearningStreak, saveLearningProgress } from '../utils/learningProgress';
 import {
   createPlaceInputState,
-  getDigitsFromNumber,
   getSemiStepDisplay,
   isSemiStepCandidate,
   initialActivePlaceIndex,
-  nextSemiStepActiveIndex,
   normalizeIndexInput,
   toSemiStepValue
 } from '../utils/semiStepUtils';
@@ -98,51 +96,6 @@ const buildLearningHint = (problem, wrongAttempts) => {
   return '숫자 하나씩 천천히 따라 해보세요.';
 };
 
-const createCarryBorrowGuide = (problem = null) => {
-  if (!problem || !['+', '-'].includes(problem.operator)) {
-    return { carry: {}, borrow: {} };
-  }
-
-  const operator = problem.operator;
-  const num1Digits = getDigitsFromNumber(problem.num1);
-  const num2Digits = getDigitsFromNumber(problem.num2);
-  const maxLen = Math.max(num1Digits.length, num2Digits.length);
-  const carry = {};
-  const borrow = {};
-
-  if (operator === '+') {
-    let carryOver = 0;
-    for (let i = 0; i < maxLen; i += 1) {
-      const n1 = Number(num1Digits[i] || 0);
-      const n2 = Number(num2Digits[i] || 0);
-      const total = n1 + n2 + carryOver;
-
-      if (Math.floor(total / 10) > 0) {
-        carry[i + 1] = 1;
-      }
-
-      carryOver = Math.floor(total / 10);
-    }
-    return { carry, borrow };
-  }
-
-  let borrowFromLower = 0;
-  for (let i = 0; i < maxLen; i += 1) {
-    const n1 = Number(num1Digits[i] || 0) - borrowFromLower;
-    const n2 = Number(num2Digits[i] || 0);
-
-    if (n1 < n2) {
-      borrow[i + 1] = 1;
-      borrowFromLower = 1;
-    } else {
-      borrowFromLower = 0;
-    }
-  }
-
-  return { carry, borrow };
-};
-
-
 const createConfettiPieces = () => {
   const colors = ['#FF7E67', '#FFD460', '#A2D5AB', '#3F72AF', '#F7A072'];
   return Array.from({ length: CONFETTI_COUNT }, (_, index) => ({
@@ -156,23 +109,6 @@ const createConfettiPieces = () => {
     borderRadius: Math.random() < 0.5 ? '50%' : '2px',
     rotation: `${Math.floor(Math.random() * 360)}deg`
   }));
-};
-
-const getGuideLabel = (guide = {}, index = 0, operator = '') => {
-  if (operator === '+' && guide.carry?.[index]) {
-    return { type: 'carry', text: `+${guide.carry[index]}` };
-  }
-
-  if (operator === '-' && guide.borrow?.[index]) {
-    return { type: 'borrow', text: '↘1' };
-  }
-
-  return null;
-};
-
-const placeLabel = (index) => {
-  const bases = ['일', '십', '백', '천', '만'];
-  return `${bases[index] || `${index}의`} 자리`;
 };
 
 const pickRandomOperation = (chapter) => {
@@ -202,7 +138,6 @@ const Learning = () => {
   const [streakCount, setStreakCount] = useState(() => getLearningStreak().streak);
   const [confettiPieces, setConfettiPieces] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [semiStepGuide, setSemiStepGuide] = useState({ carry: {}, borrow: {} });
   const [tutorialStep, setTutorialStep] = useState(0);
   const [selectedGrade, setSelectedGrade] = useState(1);
   const [selectedSemester, setSelectedSemester] = useState(1);
@@ -285,14 +220,12 @@ const Learning = () => {
     setIsSemiStep(useSemiStep);
 
     if (useSemiStep) {
-      setSemiStepGuide(createCarryBorrowGuide(nextProblem));
       setPlaceInputs(createPlaceInputState(nextProblem?.answer || 0));
       setActivePlaceIndex(initialActivePlaceIndex(nextProblem?.answer || 0));
       setInput('');
       return;
     }
 
-    setSemiStepGuide({ carry: {}, borrow: {} });
     setPlaceInputs([]);
     setActivePlaceIndex(0);
     setInput('');
@@ -323,7 +256,6 @@ const Learning = () => {
     setIsFinished(false);
     setShowConfetti(false);
     setConfettiPieces([]);
-    setSemiStepGuide({ carry: {}, borrow: {} });
     setTutorialStep(0);
     setStreakCount(getLearningStreak().streak);
     setProgressMap(getLearningProgressMap());
@@ -361,7 +293,6 @@ const Learning = () => {
     setShowConfetti(false);
     setConfettiPieces([]);
     setTutorialStep(0);
-    setSemiStepGuide({ carry: {}, borrow: {} });
     setStreakCount(getLearningStreak().streak);
   };
 
@@ -480,14 +411,19 @@ const Learning = () => {
     if (key === 'del') {
       setPlaceInputs((prev) => {
         const next = [...prev];
-        if (!next[activePlaceIndex]) {
-          const previous = Math.max(0, activePlaceIndex - 1);
-          setActivePlaceIndex(previous);
-          if (next[previous]) next[previous] = '';
-          return next;
-        }
-        next[activePlaceIndex] = '';
+        const shouldClear = activePlaceIndex < 0
+          ? 0
+          : Math.min(activePlaceIndex + 1, next.length - 1);
+
+        if (next[shouldClear] === '') return next;
+        next[shouldClear] = '';
+
         return next;
+      });
+
+      setActivePlaceIndex((prev) => {
+        if (prev < 0) return 0;
+        return Math.min(prev + 1, Math.max(0, placeInputs.length - 1));
       });
       return;
     }
@@ -500,12 +436,20 @@ const Learning = () => {
     if (typeof key !== 'number') return;
 
     setPlaceInputs((prev) => {
+      if (activePlaceIndex < 0) return [...prev];
+
       const next = [...prev];
-      next[activePlaceIndex] = normalizeIndexInput(String(key));
+      if (next[activePlaceIndex] === '') {
+        next[activePlaceIndex] = normalizeIndexInput(String(key));
+      } else if (activePlaceIndex === 0) {
+        next[activePlaceIndex] = normalizeIndexInput(String(key));
+      }
 
       return next;
     });
-    setActivePlaceIndex((prev) => nextSemiStepActiveIndex(prev));
+    setActivePlaceIndex((prev) => Math.max(-1, prev - 1));
+
+    return;
   };
 
   const handleKeyPress = (key) => {
@@ -775,41 +719,13 @@ const Learning = () => {
                 <div className="problem-card glass-panel">
                   <p className="problem-caption">현재 문제</p>
                   <ProblemRenderer problem={problem} />
-                  {isSemiStep ? (
-                    <div className="semi-answer-wrap">
-                      {placeInputs.map((value, displayIndex) => {
-                        const reversedIndex = placeInputs.length - 1 - displayIndex;
-                        const guide = getGuideLabel(semiStepGuide, reversedIndex, problem.operator);
-
-                        return (
-                          <button
-                            key={reversedIndex}
-                            type="button"
-                            className={`semi-answer-cell ${activePlaceIndex === reversedIndex ? 'active' : ''}`}
-                            onClick={() => setActivePlaceIndex(reversedIndex)}
-                          >
-                            {guide ? (
-                              <span className={`semi-step-guide ${guide.type}`}>
-                                {guide.text}
-                              </span>
-                            ) : null}
-                            <span className="semi-answer-label">
-                              {placeLabel(reversedIndex)}
-                            </span>
-                            <span className="semi-answer-input">
-                              {value || '0'}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="answer-shell">
-                      <span className={`math-answer ${isCorrect ? 'correct' : isWrong ? 'wrong' : ''}`}>
-                        {currentAnswerText}
-                      </span>
-                    </div>
-                  )}
+                  <div className="answer-shell">
+                    <span
+                      className={`math-answer ${isCorrect ? 'correct' : isWrong ? 'wrong' : ''} ${isSemiStep ? 'semi-answer-box' : ''}`}
+                    >
+                      {currentAnswerText}
+                    </span>
+                  </div>
                   <p className={`feedback ${isCorrect ? 'correct' : isWrong ? 'wrong' : ''}`}>
                     {isCorrect && '정답입니다! ✨'}
                     {isWrong && '조금만 더 생각해볼까요?'}

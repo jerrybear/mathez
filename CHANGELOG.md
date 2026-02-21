@@ -2,6 +2,18 @@
 
 모든 버전별 주요 변경 사항 및 업데이트 내역을 이 파일에 기록합니다.
 
+## [1.3.0] - 2026-02-22
+
+### Added
+- **결정론적 시각화 렌더링 (Deterministic Rendering)**
+  - `toSeedNumber` 로직을 도입하여 화면 새로고침 시에도 도형 위치, 애니메이션 딜레이 등이 일관되게 유지됨
+- **측정 및 비교 모듈 고도화**
+  - `MeasurementLength` 컴포넌트 신설 및 `buildMeasurementVisual` 로직 강화
+  - 비교하기(`compare`) 단원에 막대 차트 연동 및 시각적 피드백 개선
+- **품질 관리 (Quality Assurance)**
+  - 테스트 케이스 4개 추가 (총 43개 Pass)
+  - `TopicHasVisualSupport` 구조를 통한 시각화 우선순위 최적화
+
 ## [1.2.1] - 2026-02-21
 
 ### Fixed

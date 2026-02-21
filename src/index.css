@@ -466,6 +466,16 @@ body {
   background: rgba(162, 213, 171, 0.65);
 }
 
+.math-answer.semi-answer-box {
+  min-height: 66px;
+  border-radius: 18px;
+  border: 2px solid rgba(63, 114, 175, 0.55);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 2.35rem;
+  letter-spacing: 0.08em;
+  justify-content: center;
+}
+
 .feedback {
   font-size: 1.05rem;
   min-height: 1.8rem;
@@ -688,71 +698,6 @@ body {
   display: flex;
   gap: 0.65rem;
   flex-wrap: wrap;
-}
-
-.semi-answer-wrap {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 0.55rem;
-  margin: 0.35rem 0 0.9rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.7);
-}
-
-.semi-answer-cell {
-  width: 52px;
-  min-height: 64px;
-  border: 2px dashed rgba(255, 255, 255, 0.9);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.76);
-  color: var(--text-dark);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.semi-answer-cell.active {
-  border-color: rgba(255, 126, 103, 0.95);
-  background: rgba(255, 126, 103, 0.2);
-  transform: translateY(-1px);
-}
-
-.semi-step-guide {
-  display: inline-flex;
-  min-height: 1.5rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  padding: 0.05rem 0.45rem;
-  font-size: 0.82rem;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.semi-step-guide.carry {
-  color: #7f4bb3;
-  background: rgba(157, 102, 255, 0.14);
-}
-
-.semi-step-guide.borrow {
-  color: #1c6f9f;
-  background: rgba(28, 111, 159, 0.16);
-}
-
-.semi-answer-label {
-  font-size: 0.78rem;
-  color: rgba(63, 114, 175, 0.82);
-  white-space: nowrap;
-}
-
-.semi-answer-input {
-  font-size: 1.8rem;
-  color: var(--text-dark);
-  line-height: 1;
 }
 
 .chapter-chip {
