@@ -30,3 +30,23 @@ test('getCurriculumById는 안전한 문자열 id 조회를 수행함', () => {
   assert.equal(found?.title, '원');
   assert.equal(notFound, undefined);
 });
+
+test('c01/c02 ID와 topic이 새 기준으로 반영됨', () => {
+  const c01 = getCurriculumById('c01-number-basics');
+  const c01Legacy = getCurriculumById('c01-add-basics');
+  const c02 = getCurriculumById('c02-operations-basics');
+  const c02Legacy = getCurriculumById('c02-sub-basics');
+
+  assert.equal(c01?.id, 'c01-number-basics');
+  assert.equal(c01?.topic, 'number-basics');
+  assert.equal(c01?.description.includes('0'), true);
+  assert.equal(Array.isArray(c01?.examples), true);
+  assert.equal(c01?.examples.some((entry) => String(entry).includes('5 < 7')), true);
+
+  assert.equal(c02?.id, 'c02-operations-basics');
+  assert.equal(c02?.topic, 'operations-basics');
+  assert.equal(Array.isArray(c02?.concept), true);
+
+  assert.equal(c01Legacy?.id, 'c01-number-basics');
+  assert.equal(c02Legacy?.id, 'c02-operations-basics');
+});

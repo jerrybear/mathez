@@ -101,3 +101,35 @@ test('저장값은 음수/소수 입력도 안전하게 보정됩니다', () => 
   assert.equal(saved['mul-1'].currentIndex, 0);
   assert.equal(saved['mul-1'].score, 3);
 });
+
+test('학습 진행도는 이전 c01/c02 id 별칭을 정규화하여 저장/조회합니다', () => {
+  const storage = resetWindowStorage();
+  clearLearningProgress();
+  storage.setItem('mathez_learning_progress', JSON.stringify({
+    'c01-add-basics': { total: 8, currentIndex: 2, score: 1, completed: false },
+    [ '__streak_meta__' ]: {
+      streak: 1,
+      lastCompletedDate: '2025-01-01',
+      totalCompletions: 1,
+      updatedAt: new Date().toISOString()
+    }
+  }));
+
+  const legacy = getLearningProgress('c01-add-basics');
+  const map = getLearningProgressMap();
+
+  assert.equal(legacy?.chapterId, 'c01-number-basics');
+  assert.equal(map['c01-number-basics']?.currentIndex, 2);
+  assert.equal(map['c01-add-basics'], undefined);
+
+  const saved = saveLearningProgress({
+    chapterId: 'c02-sub-basics',
+    total: 8,
+    currentIndex: 3,
+    score: 2,
+    completed: false
+  });
+  assert.equal(saved['c02-operations-basics']?.currentIndex, 3);
+  assert.equal(saved['c02-sub-basics'], undefined);
+  assert.equal(storage.getItem('mathez_learning_progress').includes('c02-operations-basics'), true);
+});

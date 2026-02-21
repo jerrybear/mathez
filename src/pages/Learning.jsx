@@ -23,6 +23,21 @@ const CONFETTI_COUNT = 24;
 const clampHintStep = (value) => Math.max(1, Math.min(value, HINT_STEPS));
 const GRADE_OPTIONS = [1, 2, 3];
 const SEMESTER_OPTIONS = [1, 2];
+const NUMBER_BASICS_GUIDED_MODES = ['counting', 'zero', 'sequence', 'compare', 'split-combine'];
+
+const isGuidedNumberBasicsChapter = (chapter) => {
+  const topic = String(chapter?.topic || '');
+  const chapterId = String(chapter?.id || '').toLowerCase();
+  return topic === 'number-basics' || chapterId.startsWith('c01');
+};
+
+const getForcedNumberBasicsMode = (chapter, problemIndex = 0) => {
+  if (!isGuidedNumberBasicsChapter(chapter)) return '';
+  const safeIndex = Number.isFinite(Number(problemIndex))
+    ? Math.max(0, Math.floor(Number(problemIndex)))
+    : 0;
+  return NUMBER_BASICS_GUIDED_MODES[safeIndex] || '';
+};
 
 const formatAppleRow = (count) => {
   const safeCount = Math.max(0, Number(count) || 0);
@@ -231,13 +246,21 @@ const Learning = () => {
     setInput('');
   };
 
-  const createProblem = () => (selectedChapter
-    ? generateProblem(
+  const createProblem = (problemIndex = index) => {
+    if (!selectedChapter) return null;
+
+    const forcedMode = getForcedNumberBasicsMode(selectedChapter, problemIndex);
+    return generateProblem(
       selectedChapter.level,
       pickRandomOperation(selectedChapter),
-      { topic: selectedChapter.topic, chapterId: selectedChapter.id, chapterTitle: selectedChapter.title }
-    )
-    : null);
+      {
+        topic: selectedChapter.topic,
+        chapterId: selectedChapter.id,
+        chapterTitle: selectedChapter.title,
+        ...(forcedMode ? { numberBasicsMode: forcedMode } : {})
+      }
+    );
+  };
 
   const goToCurriculum = () => {
     setViewMode('curriculum');
@@ -321,7 +344,7 @@ const Learning = () => {
     if (safeIndex >= total) {
       setProblem(null);
     } else {
-      const firstProblem = createProblem();
+      const firstProblem = createProblem(safeIndex);
       configureProblemState(firstProblem);
     }
 
@@ -345,7 +368,7 @@ const Learning = () => {
       return;
     }
 
-    const nextProblem = createProblem();
+    const nextProblem = createProblem(nextIndex);
     setIndex(nextIndex);
     setScore(nextScore);
     configureProblemState(nextProblem);

@@ -130,6 +130,76 @@ export const MeasurementLength = ({ visual = {} }) => {
   );
 };
 
+export const ZeroConcept = ({ visual = {} }) => {
+  const prompt = String(visual.prompt || '빈 접시에 사과가 몇 개 있나요?');
+
+  return (
+    <div className="zero-concept-wrap">
+      <p className="visual-caption">{prompt}</p>
+      <div className="zero-slot-grid">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={`zero-slot-${index}`} className="zero-slot" />
+        ))}
+      </div>
+      <p className="visual-subtitle">그림을 보고 개수를 숫자로 입력해 보세요.</p>
+    </div>
+  );
+};
+
+export const SequencePrompt = ({ visual = {} }) => {
+  const prompt = String(visual.prompt || '순서를 보고 다음 수를 추론해 보세요.');
+  const hasBaseNumber = Number.isFinite(Number(visual?.number));
+
+  return (
+    <div className="sequence-wrap">
+      <p className="visual-caption">{prompt}</p>
+      <div className="sequence-line">
+        {hasBaseNumber ? (
+          <span className="sequence-number">
+            {visual?.number}
+          </span>
+        ) : null}
+      </div>
+      <p className="visual-subtitle">순서의 규칙을 떠올리면 정답을 쉽게 찾을 수 있어요.</p>
+    </div>
+  );
+};
+
+export const CompareVisual = ({ visual = {} }) => {
+  const leftCount = Number.isFinite(Number(visual.left?.count)) ? Math.max(0, Math.round(Number(visual.left?.count))) : 0;
+  const rightCount = Number.isFinite(Number(visual.right?.count)) ? Math.max(0, Math.round(Number(visual.right?.count))) : 0;
+  const leftLabel = visual.left?.label || 'A';
+  const rightLabel = visual.right?.label || 'B';
+
+  return (
+    <div className="compare-wrap">
+      <p className="visual-caption">{visual.question || '왼쪽과 오른쪽 개수를 비교해 보세요.'}</p>
+      <div className="compare-row">
+        <div className="compare-group">
+          <p className="compare-group-label">왼쪽</p>
+          <div className="compare-items">
+            {Array.from({ length: Math.min(9, leftCount) }).map((_, index) => (
+              <span key={`left-${index}`} className="compare-item">{leftLabel}</span>
+            ))}
+          </div>
+          <p className="compare-count">개수: {leftCount}</p>
+        </div>
+        <p className="compare-symbol" aria-hidden="true">VS</p>
+        <div className="compare-group">
+          <p className="compare-group-label">오른쪽</p>
+          <div className="compare-items">
+            {Array.from({ length: Math.min(9, rightCount) }).map((_, index) => (
+              <span key={`right-${index}`} className="compare-item">{rightLabel}</span>
+            ))}
+          </div>
+          <p className="compare-count">개수: {rightCount}</p>
+        </div>
+      </div>
+      <p className="visual-subtitle">두 그룹의 개수 차이를 숫자로 입력해 보세요.</p>
+    </div>
+  );
+};
+
 export const ProblemRenderer = ({ problem }) => {
   if (!problem) return null;
 
@@ -184,6 +254,9 @@ export const ProblemRenderer = ({ problem }) => {
   if (problem.visual.type === 'clock-reading') return <AnalogClock time={problem.visual.time} />;
   if (problem.visual.type === 'chart-bar') return <SimpleBarChart visual={problem.visual} />;
   if (problem.visual.type === 'measurement-length') return <MeasurementLength visual={problem.visual} />;
+  if (problem.visual.type === 'zero-concept') return <ZeroConcept visual={problem.visual} />;
+  if (problem.visual.type === 'sequence') return <SequencePrompt visual={problem.visual} />;
+  if (problem.visual.type === 'compare') return <CompareVisual visual={problem.visual} />;
 
   return null;
 };

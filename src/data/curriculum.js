@@ -1,39 +1,41 @@
 const curriculum = [
   {
-    id: 'c01-add-basics',
+    id: 'c01-number-basics',
     grade: 1,
     semester: 1,
     level: 1,
-    topic: 'addition',
+    topic: 'number-basics',
     title: '9까지의 수',
     questionCount: 8,
     emoji: '🍎',
     operations: ['+'],
-    description: '9까지의 수를 중심으로 수의 양과 합성 개념을 확실히 익힙니다.',
+    description: '9까지의 수를 세고, 0, 순서, 비교를 함께 익혀 수량의 기초를 다져요.',
     concept: [
-      '숫자와 물건을 하나씩 세어 9 이내의 결과를 확인해요.',
-      '덧셈은 모아서 셀 때 더 작게 나눠보면 쉬워져요.',
-      '문제의 수를 한 번에 외우기보다 “몇 개를 더하는지”를 먼저 본 뒤 계산해요.'
+      '물건을 보며 1~9개를 정확히 세고 숫자로 연결해요.',
+      '0은 “아무것도 없음”으로 받아들이고 0의 의미를 이해해요.',
+      '첫째/둘째/셋째와 같은 순서 표현을 사용해 다음/이전 수를 말해보세요.',
+      '“더 많다/적다/같다”를 말문법과 함께 비교하며 수의 크기를 정리해요.',
+      '가르기와 모으기로 수의 전체 구조를 직접 만져보며 다시 쪼개고 합쳐요.'
     ],
-    examples: ['4 + 3 = 7', '7 + 2 = 9']
+    examples: ['🍎가 3개', '3의 다음 수는?', '0은 무엇일까요?', '5 < 7']
   },
   {
-    id: 'c02-sub-basics',
+    id: 'c02-operations-basics',
     grade: 1,
     semester: 1,
     level: 1,
-    topic: 'subtraction',
+    topic: 'operations-basics',
     title: '덧셈과 뺄셈',
     questionCount: 8,
     emoji: '🍉',
     operations: ['+', '-'],
-    description: '덧셈과 뺄셈의 관계를 함께 보고, 숫자의 변화를 이해합니다.',
+    description: '덧셈(+)과 뺄셈(-) 기호의 의미를 익히고 식을 읽어 정확히 계산해요.',
     concept: [
-      '덧셈은 모아서, 뺄셈은 덜어내서 생각하면 됩니다.',
-      '“전체에서 몇 개를 뺀 뒤 남은 수”를 문장으로 말해보면 안정적입니다.',
-      '숫자 비교를 함께 하면 오류를 빠르게 점검할 수 있어요.'
+      '+, -, =를 볼 때 숫자의 흐름을 한 번씩 소리 내어 읽어요.',
+      '합과 차를 기호 중심으로 풀면서 전체 수에서 빼고 남은 수를 확인해요.',
+      '문장 속 등식의 좌변·우변 위치를 바꿔 말해도 같은 의미인지 확인해요.'
     ],
-    examples: ['9 - 4 = 5', '7 - 3 = 4']
+    examples: ['3 + 4 = 7', '9 - 3 = 6', '5 + ? = 8', '10 - ? = 2']
   },
   {
     id: 'c07-shape-count',
@@ -281,6 +283,17 @@ const curriculum = [
   }
 ];
 
-export const getCurriculumById = (id = '') => curriculum.find((item) => item.id === String(id));
+const CHAPTER_ID_ALIASES = {
+  'c01-add-basics': 'c01-number-basics',
+  'c02-sub-basics': 'c02-operations-basics'
+};
+
+export const getCurriculumById = (id = '') => {
+  const normalizedId = String(id || '').trim();
+  const canonicalId = CHAPTER_ID_ALIASES[normalizedId] || normalizedId;
+
+  return curriculum.find((item) => item.id === canonicalId)
+    || curriculum.find((item) => item.id === normalizedId);
+};
 
 export default curriculum;

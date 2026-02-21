@@ -1,5 +1,9 @@
 const STORAGE_KEY = 'mathez_learning_progress';
 const STREAK_META_KEY = '__streak_meta__';
+const CHAPTER_PROGRESS_ALIASES = {
+  'c01-add-basics': 'c01-number-basics',
+  'c02-sub-basics': 'c02-operations-basics'
+};
 
 const createDateKey = (inputDate) => {
   const source = inputDate ? new Date(inputDate) : new Date();
@@ -109,8 +113,50 @@ const toPositiveInt = (value, fallback = 0) => {
   return Math.max(0, Math.round(number));
 };
 
+const normalizeChapterId = (chapterId = '') => {
+  const raw = String(chapterId || '').trim();
+  return CHAPTER_PROGRESS_ALIASES[raw] || raw;
+};
+
+const normalizeProgressMap = (map = {}) => {
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return { ...map };
+
+  const result = {};
+  Object.entries(map).forEach(([key, value]) => {
+    if (key === STREAK_META_KEY) {
+      result[key] = value;
+      return;
+    }
+
+    const canonicalId = normalizeChapterId(key);
+    if (!canonicalId) return;
+
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      result[canonicalId] = value;
+      return;
+    }
+
+    const existing = result[canonicalId];
+    if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
+      result[canonicalId] = {
+        ...existing,
+        ...value,
+        chapterId: canonicalId
+      };
+      return;
+    }
+
+    result[canonicalId] = {
+      ...value,
+      chapterId: canonicalId
+    };
+  });
+
+  return result;
+};
+
 const normalizePayload = (payload = {}) => {
-  const chapterId = String(payload.chapterId || '').trim();
+  const chapterId = normalizeChapterId(payload.chapterId);
   if (!chapterId) return null;
 
   return {
@@ -124,12 +170,13 @@ const normalizePayload = (payload = {}) => {
   };
 };
 
-export const getLearningProgressMap = () => readStorage();
+export const getLearningProgressMap = () => normalizeProgressMap(readStorage());
 
 export const getLearningProgress = (chapterId) => {
   if (!chapterId) return null;
   const map = getLearningProgressMap();
-  return map[chapterId] || null;
+  const canonicalId = normalizeChapterId(chapterId);
+  return map[canonicalId] || null;
 };
 
 export const saveLearningProgress = (payload = {}) => {

@@ -95,46 +95,129 @@ test('generateProblem returns shape visual payload for shape topics', () => {
 
 test('generateProblem returns split-combine visual for level1 addition topics', () => {
   const result = generateProblem(1, '+', {
-    topic: 'addition',
-    chapterId: 'c01-add-basics',
-    chapterTitle: '덧셈'
+    topic: 'operations-basics',
+    chapterId: 'c02-operations-basics',
+    chapterTitle: '덧셈과 뺄셈'
   });
 
   assert.equal(result.visual?.type, 'interactive');
   assert.equal(result.visual?.subType, 'split-combine');
-  assert.equal(result.visual?.topic, 'addition');
+  assert.equal(result.visual?.topic, 'operations-basics');
   assert.equal(result.visual?.level, 1);
   assert.equal(result.visual?.totalCount, result.num1 + result.num2);
 });
 
-test('c01/c02 level1 basic chapters avoid zero values', () => {
-  const c01Addition = generateProblem(1, '+', {
-    topic: 'addition',
-    chapterId: 'c01-add-basics',
-    chapterTitle: '9까지의 수'
-  });
-  const c02Subtraction = generateProblem(1, '-', {
-    topic: 'subtraction',
-    chapterId: 'c02-sub-basics',
+test('c02 operations-basics supports subtraction split-combine', () => {
+  const result = withMockRandom([0.2, 0.8], () => generateProblem(1, '-', {
+    topic: 'operations-basics',
+    chapterId: 'c02-operations-basics',
     chapterTitle: '덧셈과 뺄셈'
-  });
+  }));
 
-  assert.ok(c01Addition.num1 >= 1);
-  assert.ok(c01Addition.num2 >= 1);
-  assert.ok(c01Addition.num1 + c01Addition.num2 <= 9);
-  assert.ok(c02Subtraction.num1 >= 1);
-  assert.ok(c02Subtraction.num2 >= 1);
-  assert.ok(c02Subtraction.num1 >= c02Subtraction.num2);
+  assert.equal(result.visual?.type, 'interactive');
+  assert.equal(result.visual?.subType, 'split-combine');
+  assert.equal(result.answer, result.num1 - result.num2);
+  assert.equal(result.visual?.topic, 'operations-basics');
+  assert.equal(result.num1 >= result.num2, true);
+});
+
+test('c01 level1 number-basics emits diverse mode visuals', () => {
+  const counting = withMockRandom([0, 0.1, 0.2], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수'
+  }));
+  const zero = withMockRandom([0.25], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수'
+  }));
+  const sequence = withMockRandom([0.45], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수'
+  }));
+  const comparison = withMockRandom([0.7, 0.1, 0.9], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수'
+  }));
+  const splitCombine = withMockRandom([0.999, 0.2, 0.5], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수'
+  }));
+
+  assert.equal(counting.visual.type, 'count-shapes');
+  assert.equal(zero.visual.type, 'zero-concept');
+  assert.equal(sequence.visual.type, 'sequence');
+  assert.equal(comparison.visual.type, 'compare');
+  assert.equal(splitCombine.visual.type, 'interactive');
+  assert.equal(splitCombine.visual.subType, 'split-combine');
 });
 
 test('split-combine prompt shows concrete numeric operands', () => {
-  const result = generateProblem(1, '+', {
+  const result = withMockRandom([0.2, 0.8], () => generateProblem(1, '+', {
+    topic: 'operations-basics',
+    chapterId: 'c02-operations-basics',
+    chapterTitle: '9까지의 수'
+  }));
+
+  assert.equal(result.visual?.prompt.includes(`${result.num1}과 ${result.num2}를 모으면`), true);
+});
+
+test('legacy c01 id generates level1 number-basics', () => {
+  const legacyResult = withMockRandom([0.25], () => generateProblem(1, '+', {
     topic: 'addition',
     chapterId: 'c01-add-basics',
     chapterTitle: '9까지의 수'
-  });
+  }));
 
-  assert.equal(result.visual?.prompt.includes(`${result.num1}과 ${result.num2}를 모으면`), true);
+  assert.equal(legacyResult?.visual?.type, 'zero-concept');
+  assert.equal(legacyResult.topic, 'addition');
+});
+
+test('generateProblem honors forced number-basics mode option', () => {
+  const counting = withMockRandom([0.1, 0.2, 0.3], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수',
+    numberBasicsMode: 'counting'
+  }));
+  const zero = generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수',
+    numberBasicsMode: 'zero'
+  });
+  const sequence = withMockRandom([0, 0], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수',
+    numberBasicsMode: 'sequence'
+  }));
+  const compare = withMockRandom([0.1, 0.9], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수',
+    numberBasicsMode: 'compare'
+  }));
+  const splitCombine = withMockRandom([0.2, 0.5, 0.1], () => generateProblem(1, '+', {
+    topic: 'number-basics',
+    chapterId: 'c01-number-basics',
+    chapterTitle: '9까지의 수',
+    numberBasicsMode: 'split-combine'
+  }));
+
+  assert.equal(counting.visual?.type, 'count-shapes');
+  assert.equal(zero.visual?.type, 'zero-concept');
+  assert.equal(zero.answer, 0);
+  assert.equal(sequence.visual?.type, 'sequence');
+  assert.equal(compare.visual?.type, 'compare');
+  assert.equal(compare.visual?.left?.count >= 1, true);
+  assert.equal(compare.visual?.right?.count >= 1, true);
+  assert.equal(splitCombine.visual?.type, 'interactive');
+  assert.equal(splitCombine.visual?.subType, 'split-combine');
 });
 
 test('generateProblem returns base-10 blocks visual for level2 carry/borrow topics', () => {

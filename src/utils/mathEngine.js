@@ -46,6 +46,8 @@ const isShapeTopic = (topic) => ['shapes', 'geometry-figures', 'circle'].include
 const isCompareTopic = (topic) => topic === 'compare';
 const isMeasurementLengthTopic = (topic) => topic === 'measurement-length';
 const isDataTopic = (topic) => topic === 'data';
+const isNumberBasicsTopic = (topic) => String(topic || '') === 'number-basics';
+const isOperationsBasicsTopic = (topic) => String(topic || '') === 'operations-basics';
 const isClockTopic = (topic, title = '') => {
   const normalized = String(topic || '').toLowerCase();
   const normalizedTitle = String(title || '').toLowerCase();
@@ -68,9 +70,16 @@ const isBasicLevel1Chapter = (chapterId = '') => {
   const normalizedChapterId = String(chapterId || '').toLowerCase();
   return normalizedChapterId.startsWith('c01') || normalizedChapterId.startsWith('c02');
 };
+const NUMBER_BASICS_MODE_INDEX = {
+  counting: 0,
+  zero: 1,
+  sequence: 2,
+  compare: 3,
+  'split-combine': 4
+};
 
 const shouldUseSplitCombine = (topic, operation, level) => (
-  (isAdditionTopic(topic) || isSubtractionTopic(topic))
+  (isAdditionTopic(topic) || isSubtractionTopic(topic) || isNumberBasicsTopic(topic) || isOperationsBasicsTopic(topic))
   && ['+', '-'].includes(String(operation || ''))
   && clampLevel(level) === 1
 );
@@ -407,6 +416,168 @@ const buildMeasurementVisual = () => {
   };
 };
 
+const buildCountingVisual = () => {
+  const shapes = ['🍎', '🍌', '🍓', '🍇', '🍊', '🍋', '🍒', '🍐'];
+  const itemCount = randomInt(1, 9);
+  const target = pickRandom(shapes);
+  const items = Array.from({ length: itemCount }, () => pickRandom(shapes));
+
+  let answer = items.filter((item) => item === target).length;
+  if (answer === 0) {
+    items[0] = target;
+    answer = 1;
+  }
+
+  return {
+    type: 'count-shapes',
+    target,
+    items,
+    layout: 'ordered',
+    answer,
+    prompt: '1~9 사이 개수를 세보세요.'
+  };
+};
+
+const buildZeroVisual = () => ({
+  type: 'zero-concept',
+  count: 0,
+  prompt: '빈 접시에 사과가 몇 개 있나요?'
+});
+
+const buildSequenceVisual = () => {
+  const sequenceLabels = ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째', '일곱째', '여덟째', '아홉째'];
+  const mode = randomInt(0, 2);
+
+  if (mode === 0) {
+    const base = randomInt(1, 8);
+    return {
+      type: 'sequence',
+      prompt: `${base}의 다음 수는?`,
+      answer: base + 1,
+      number: base,
+      mode: 'next'
+    };
+  }
+
+  if (mode === 1) {
+    const base = randomInt(2, 9);
+    return {
+      type: 'sequence',
+      prompt: `${base}의 이전 수는?`,
+      answer: base - 1,
+      number: base,
+      mode: 'previous'
+    };
+  }
+
+  const index = randomInt(1, 9);
+  return {
+    type: 'sequence',
+    prompt: `${sequenceLabels[index - 1]}는 몇 번째 수일까요?`,
+    answer: index,
+    ordinalIndex: index
+  };
+};
+
+const buildComparisonVisual = () => {
+  const leftCount = randomInt(1, 9);
+  const rightCount = randomInt(1, 9);
+  if (leftCount === rightCount) {
+    return buildComparisonVisual();
+  }
+
+  return {
+    type: 'compare',
+    left: { label: '🍎', count: leftCount },
+    right: { label: '🍊', count: rightCount },
+    question: `🍎와 🍊의 개수를 보고 더 많은 쪽이 몇 개 더 많은지 구하세요.`,
+    answer: Math.abs(leftCount - rightCount)
+  };
+};
+
+const buildSplitCombineNumberBasicsVisual = (operation = '+', num1 = 0, num2 = 0) => {
+  const safeNum1 = Math.max(0, Math.round(num1));
+  const safeNum2 = Math.max(0, Math.round(num2));
+  return buildSplitCombineVisual('number-basics', 1, operation, safeNum1, safeNum2, randomInt(100, 999));
+};
+
+const generateNumberBasicsProblem = (level = 1, operation = '+', options = {}) => {
+  const safeLevel = clampLevel(level);
+  const safeOperation = String(operation || '+');
+  const forcedMode = String(options?.numberBasicsMode || '').trim();
+
+  if (safeLevel !== 1) {
+    return safeOperation === '-'
+      ? generateSubtractionProblem(safeLevel, 'number-basics', 'c01-number-basics')
+      : generateAdditionProblem(safeLevel, 'number-basics', 'c01-number-basics');
+  }
+
+  const forcedModeIndex = Object.prototype.hasOwnProperty.call(NUMBER_BASICS_MODE_INDEX, forcedMode)
+    ? NUMBER_BASICS_MODE_INDEX[forcedMode]
+    : -1;
+  const mode = forcedModeIndex >= 0 ? forcedModeIndex : randomInt(0, 4);
+
+  if (mode === 0) {
+    const visual = buildCountingVisual();
+    return {
+      num1: 0,
+      num2: 0,
+      answer: visual.answer,
+      visual
+    };
+  }
+
+  if (mode === 1) {
+    const visual = buildZeroVisual();
+    return {
+      num1: 0,
+      num2: 0,
+      answer: 0,
+      visual
+    };
+  }
+
+  if (mode === 2) {
+    const visual = buildSequenceVisual();
+    return {
+      num1: visual.answer,
+      num2: 0,
+      answer: visual.answer,
+      visual
+    };
+  }
+
+  if (mode === 3) {
+    const visual = buildComparisonVisual();
+    return {
+      num1: 0,
+      num2: 0,
+      answer: visual.answer,
+      visual
+    };
+  }
+
+  if (safeOperation === '-') {
+    const num1 = randomInt(1, 8);
+    const num2 = randomInt(0, num1);
+    return {
+      num1,
+      num2,
+      answer: num1 - num2,
+      visual: buildSplitCombineNumberBasicsVisual('-', num1, num2)
+    };
+  }
+
+  const num1 = randomInt(1, 4);
+  const num2 = randomInt(1, 9 - num1);
+  return {
+    num1,
+    num2,
+    answer: num1 + num2,
+    visual: buildSplitCombineNumberBasicsVisual('+', num1, num2)
+  };
+};
+
 const buildSplitCombineVisual = (topic = '', level = 1, operation = '+', num1 = 0, num2 = 0, seed = '') => {
   const safeLevel = clampLevel(level);
   const safeOperation = String(operation || '+');
@@ -553,6 +724,8 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
   const topic = String(options?.topic || '');
   const chapterTitle = String(options?.chapterTitle || '');
   const chapterId = String(options?.chapterId || '');
+  const isLevel1C01 = safeLevel === 1 && chapterId.toLowerCase().startsWith('c01');
+  const isNumberBasics = isNumberBasicsTopic(topic) || isLevel1C01;
 
   const operationGenerators = {
     '+': generateAdditionProblem,
@@ -561,7 +734,9 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
     '/': generateDivisionProblem
   };
 
-  const generated = operationGenerators[safeOp](safeLevel, topic, chapterId);
+  const generated = isNumberBasics
+    ? generateNumberBasicsProblem(safeLevel, safeOp, { numberBasicsMode: options?.numberBasicsMode })
+    : operationGenerators[safeOp](safeLevel, topic, chapterId);
   const { num1 = 0, num2 = 0, answer: explicitAnswer } = generated || {};
 
   let answer = 0;
@@ -594,7 +769,9 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
     num2,
     answer: fixedAnswer
   });
-  const visualBuild = buildVisualProblem(topic, chapterTitle, safeOp, safeLevel, num1, num2, fixedAnswer, problemSeed);
+  const visualBuild = isNumberBasics && generated?.visual
+    ? generated.visual
+    : buildVisualProblem(topic, chapterTitle, safeOp, safeLevel, num1, num2, fixedAnswer, problemSeed);
   const visual = visualBuild?.visual || visualBuild;
   const finalNum1 = Number.isFinite(visualBuild?.num1) ? visualBuild.num1 : num1;
   const finalNum2 = Number.isFinite(visualBuild?.num2) ? visualBuild.num2 : num2;
