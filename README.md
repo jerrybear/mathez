@@ -1,16 +1,39 @@
-# React + Vite
+# Mathez (초등 수학 학습 앱)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+초등학생 눈높이에 맞춘 예쁘고 직관적인 UI(글래스모피즘)와 마이크로 애니메이션을 제공하는 수학 학습 웹 애플리케이션입니다.
 
-Currently, two official plugins are available:
+## ✨ 주요 기능
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. 📖 학습 모드 (Learning Mode)
+- **시간 제한 없음:** 아이들이 차분하게 생각하고 문제를 풀 수 있도록 시간 압박이 없습니다.
+- **맞춤형 난이도:** 레벨 1(기초)부터 레벨 4(심화)까지 덧셈, 뺄셈, 곱셈, 나눗셈 문항이 무작위로 생성됩니다.
+- **시각적 힌트 제공:** 정답을 지속적으로 틀릴 경우, 🍎 사과 이모지와 계산 풀이 과정을 단계별로 풀어서 보여주는 시각적 힌트를 제공합니다.
 
-## React Compiler
+### 2. ⏱️ 퀴즈 모드 (Quiz Mode)
+- **제한 시간 시한폭탄:** 각 레벨별로 주어진 시간 내에 문제를 모두 풀어야 합니다. (긴장감 오조오억배!)
+- **콤보 시스템 (Combo):** 연속으로 정답을 맞히면 화면에 불타오르는 콤보 이펙트(🔥)와 보너스 점수가 주어집니다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 3. ♻️ 복습 모드 (Review Mode / 오답 노트)
+- **오답 영구 보관:** 학습 및 퀴즈 모드에서 틀렸던 문제는 브라우저 캐시(LocalStorage)에 안전하게 누적 보관됩니다. (몇 번 틀렸는지 FailCount 제공)
+- **오답 변형 출제 (유사 문제):** 틀렸던 문제를 클릭하면, 똑같은 숫자가 아닌 "원래 수식에서 10~20% 내외로 숫자가 변형된 유사 문제"를 출제하여 완벽하게 이해했는지 다시 테스트합니다.
+- 복습 모드에서 유사 문제를 완벽히 맞히면 나만의 오답 노트에서 해당 문제가 영구 삭제되며 칭찬 애니메이션이 제공됩니다.
 
-## Expanding the ESLint configuration
+## 🛠 기술 스택
+- **Framework:** React 19 (Vite 기반 SPA)
+- **Routing:** React-Router-Dom
+- **Styling:** Vanilla CSS (Glassmorphism, CSS Variables, Animations)
+- **Icons:** Lucide-React
+- **Storage:** Browser LocalStorage
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 로컬 실행 방법 (How to run)
+
+1. 저장소를 클론(Clone)하거나 다운로드합니다.
+2. 프로젝트 디렉토리에서 의존성을 설치합니다.
+   ```bash
+   npm install
+   ```
+3. 개발 서버를 실행합니다.
+   ```bash
+   npm run dev
+   ```
+4. 브라우저에서 `http://localhost:5173` 으로 접속합니다.

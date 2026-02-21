@@ -1,6 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { BookOpen, RefreshCw, Trophy, ArrowLeft } from 'lucide-react';
+import { BookOpen, RefreshCw, Trophy } from 'lucide-react';
+import Learning from './pages/Learning';
+import Quiz from './pages/Quiz';
+import Review from './pages/Review';
 
 const Home = () => (
   <div className="container animate-fade-in">
@@ -22,22 +25,6 @@ const Home = () => (
     </div>
   </div>
 );
-
-const PageLayout = ({ title, children }) => (
-  <div className="container animate-fade-in" style={{ justifyContent: 'flex-start', paddingTop: '3rem' }}>
-    <h2 className="page-header">{title}</h2>
-    <div className="glass-panel" style={{ flex: 1, width: '100%', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      {children}
-    </div>
-    <Link to="/" className="glass-btn back-btn" style={{ gap: '0.5rem', alignSelf: 'center' }}>
-      <ArrowLeft size={20} /> 홈으로
-    </Link>
-  </div>
-);
-
-const Learning = () => <PageLayout title="학습 모드">준비 중이에요!</PageLayout>;
-const Review = () => <PageLayout title="복습 모드">준비 중이에요!</PageLayout>;
-const Quiz = () => <PageLayout title="퀴즈 모드">준비 중이에요!</PageLayout>;
 
 function App() {
   return (
