@@ -96,6 +96,64 @@ test('ProblemRenderer returns empty string when visual type is unknown', () => {
   assert.equal(markup, '');
 });
 
+test('ProblemRenderer renders split-combine interactive visual', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(ProblemRenderer, {
+      problem: {
+        operator: '-',
+        visual: {
+          type: 'interactive',
+          subType: 'split-combine',
+          totalCount: 1,
+          target: '🍎'
+        }
+      }
+    })
+  );
+
+  assert.equal(markup.includes('split-zone'), true);
+  assert.equal((markup.match(/split-item/g) || []).length, 1);
+});
+
+test('ProblemRenderer renders base-10 interactive visual', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(ProblemRenderer, {
+      problem: {
+        operator: '+',
+        visual: {
+          type: 'interactive',
+          subType: 'base-10-blocks',
+          tensCount: 1,
+          onesCount: 2
+        }
+      }
+    })
+  );
+
+  assert.equal(markup.includes('base10-tens-wrap'), true);
+  assert.equal((markup.match(/base10-tens-item/g) || []).length, 1);
+});
+
+test('ProblemRenderer renders fraction-cut interactive visual', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(ProblemRenderer, {
+      problem: {
+        operator: '+',
+        visual: {
+          type: 'interactive',
+          subType: 'fraction-cuts',
+          totalSlices: 6,
+          denominator: 6,
+          coloredCount: 2
+        }
+      }
+    })
+  );
+
+  assert.equal(markup.includes('fraction-stage'), true);
+  assert.equal(markup.includes('조각 자르기'), true);
+});
+
 test('ShapeGroup renders fallback target and subtitle', () => {
   const markup = renderToStaticMarkup(React.createElement(ShapeGroup, {
     visual: {

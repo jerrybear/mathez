@@ -93,6 +93,35 @@ test('generateProblem returns shape visual payload for shape topics', () => {
   assert.equal(result.num2, 0);
 });
 
+test('generateProblem returns split-combine visual for level1 addition topics', () => {
+  const result = generateProblem(1, '+', {
+    topic: 'addition',
+    chapterId: 'c01-add',
+    chapterTitle: '덧셈'
+  });
+
+  assert.equal(result.visual?.type, 'interactive');
+  assert.equal(result.visual?.subType, 'split-combine');
+  assert.equal(result.visual?.topic, 'addition');
+  assert.equal(result.visual?.level, 1);
+  assert.equal(result.visual?.totalCount, result.num1 + result.num2);
+});
+
+test('generateProblem returns base-10 blocks visual for level2 carry/borrow topics', () => {
+  const result = generateProblem(2, '+', {
+    topic: 'addition-carry',
+    chapterId: 'c02-carry',
+    chapterTitle: '받아올림'
+  });
+
+  assert.equal(result.visual?.type, 'interactive');
+  assert.equal(result.visual?.subType, 'base-10-blocks');
+  assert.equal(result.visual?.topic, 'addition-carry');
+  assert.equal(result.visual?.level, 2);
+  assert.equal(result.visual?.tensCount >= 1, true);
+  assert.equal(result.visual?.onesCount >= 0, true);
+});
+
 test('generateProblem returns clock visual payload for clock topics', () => {
   const result = withMockRandom([0.5], () => generateProblem(1, '+', {
     topic: 'subtraction-borrow',
@@ -114,6 +143,21 @@ test('generateProblem returns clock visual by chapter title keyword', () => {
   }));
 
   assert.equal(result.visual.type, 'clock-reading');
+});
+
+test('generateProblem returns fraction-cuts visual for fraction-decimal level2+', () => {
+  const result = withMockRandom([0.1, 0.7], () => generateProblem(2, '+', {
+    topic: 'fraction-decimal',
+    chapterId: 'c04-fraction',
+    chapterTitle: '분수'
+  }));
+
+  assert.equal(result.visual?.type, 'interactive');
+  assert.equal(result.visual?.subType, 'fraction-cuts');
+  assert.equal(result.visual?.topic, 'fraction-decimal');
+  assert.equal(result.visual?.level, 2);
+  assert.equal(result.visual?.totalSlices >= 2, true);
+  assert.equal(result.visual?.denominator, result.visual?.totalSlices);
 });
 
 test('generateProblem returns chart visual payload for data topic', () => {

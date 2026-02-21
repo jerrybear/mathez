@@ -1,4 +1,15 @@
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const toSeedNumber = (raw) => {
+  const source = String(raw ?? '');
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash >>>= 0;
+    hash *= 16777619;
+    hash >>>= 0;
+  }
+  return hash >>> 0;
+};
 
 const roundToDecimal = (value, precision = 1) => {
   const factor = 10 ** precision;
@@ -48,6 +59,27 @@ const isClockTopic = (topic, title = '') => {
     || normalizedTitle.includes('시각')
     || normalizedTitle.includes('시간');
 };
+
+const isAdditionTopic = (topic) => String(topic || '') === 'addition';
+const isSubtractionTopic = (topic) => String(topic || '') === 'subtraction';
+const isBorrowTopic = (topic) => String(topic || '') === 'subtraction-borrow';
+const isCarryTopic = (topic) => String(topic || '') === 'addition-carry';
+
+const shouldUseSplitCombine = (topic, operation, level) => (
+  (isAdditionTopic(topic) || isSubtractionTopic(topic))
+  && ['+', '-'].includes(String(operation || ''))
+  && clampLevel(level) === 1
+);
+
+const shouldUseBase10Blocks = (topic, level) => (
+  level === 2 && (isBorrowTopic(topic) || isCarryTopic(topic))
+);
+
+const shouldUseFractionCuts = (topic, level) => (
+  String(topic || '') === 'fraction-decimal' && level >= 2
+);
+
+const normalizeVisualSeed = (value) => Math.max(1, Math.round(Number(value) || 0));
 
 const topicHasVisualSupport = (topic, chapterTitle = '') => [
   isShapeTopic(topic),
@@ -367,13 +399,108 @@ const buildMeasurementVisual = () => {
   };
 };
 
-const buildVisualProblem = (topic, title = '', operation = '+') => {
+const buildSplitCombineVisual = (topic = '', level = 1, operation = '+', num1 = 0, num2 = 0, seed = '') => {
+  const safeLevel = clampLevel(level);
+  const safeOperation = String(operation || '+');
+  const normalizedTopic = String(topic || '');
+  const totalCount = safeOperation === '-'
+    ? normalizeVisualSeed(num1)
+    : normalizeVisualSeed(num1 + num2);
+
+  return {
+    type: 'interactive',
+    subType: 'split-combine',
+    operation: safeOperation,
+    topic: normalizedTopic,
+    level: safeLevel,
+    target: '🍎',
+    totalCount: Math.max(2, Math.min(24, Math.max(totalCount, 2))),
+    leftAmount: Math.max(0, normalizeVisualSeed(num1)),
+    rightAmount: Math.max(0, normalizeVisualSeed(num2)),
+    prompt: safeOperation === '-'
+      ? `전체 ${safeLevel}학년은 빼기에서 보조적으로 떼어내는 흐름을 확인해요.`
+      : '덧셈에서 가르기/모으기를 통해 개수를 눈으로 확인해요.',
+    seed: String(seed || ''),
+    isInteractive: true
+  };
+};
+
+const buildBase10BlocksVisual = (topic = '', level = 1, operation = '+', num1 = 0, num2 = 0, seed = '') => {
+  const safeLevel = clampLevel(level);
+  const safeOperation = String(operation || '+');
+  const leftTens = Math.floor(Math.max(0, normalizeVisualSeed(num1)) / 10);
+  const leftOnes = Math.max(0, normalizeVisualSeed(num1)) % 10;
+  const rightTens = Math.floor(Math.max(0, normalizeVisualSeed(num2)) / 10);
+  const rightOnes = Math.max(0, normalizeVisualSeed(num2)) % 10;
+
+  return {
+    type: 'interactive',
+    subType: 'base-10-blocks',
+    operation: safeOperation,
+    topic: String(topic || ''),
+    level: safeLevel,
+    tensCount: Math.max(1, leftTens + rightTens),
+    onesCount: leftOnes + rightOnes,
+    left: { tens: leftTens, ones: leftOnes },
+    right: { tens: rightTens, ones: rightOnes },
+    isBorrowMode: String(topic || '') === 'subtraction-borrow',
+    isCarryMode: String(topic || '') === 'addition-carry',
+    prompt: safeOperation === '-'
+      ? '십의 자리 막대를 눌러 일의 자리로 분해해보면 받아내림이 자연스럽게 보여요.'
+      : '일 모형이 10개가 되면 십으로 다시 모아보는 흐름을 연습해요.',
+    seed: String(seed || ''),
+    isInteractive: true
+  };
+};
+
+const buildFractionVisual = (topic = '', level = 1, operation = '+', answer = 0, seed = '') => {
+  const safeLevel = clampLevel(level);
+  const safeOperation = String(operation || '+');
+  const safeAnswer = Number.isFinite(answer) ? Math.abs(Number(answer)) : 0;
+  const denominator = Math.max(2, Math.min(10, 2 + Math.floor((safeAnswer * 10) % 8)));
+  const numerator = Math.max(
+    1,
+    Math.min(denominator - 1, Math.floor((safeAnswer * denominator) % denominator) || 1)
+  );
+
+  return {
+    type: 'interactive',
+    subType: 'fraction-cuts',
+    operation: safeOperation,
+    topic: String(topic || ''),
+    level: safeLevel,
+    totalSlices: denominator,
+    denominator,
+    coloredCount: numerator,
+    prompt: `총 ${denominator}조각 중 ${numerator}조각을 색칠해보세요.`,
+    seed: String(seed || ''),
+    isInteractive: true
+  };
+};
+
+const buildVisualProblem = (topic = '', title = '', operation = '+', level = 1, num1 = 0, num2 = 0, answer = 0, seed = '') => {
   const shapeTopic = isShapeTopic(topic);
   const compareTopic = isCompareTopic(topic);
   const measurementTopic = isMeasurementLengthTopic(topic);
   const clockTopic = isClockTopic(topic, title);
   const dataTopic = isDataTopic(topic);
   const hasVisual = topicHasVisualSupport(topic, title);
+  const safeLevel = clampLevel(level);
+  const safeOperation = String(operation || '+');
+  const normalizedTopic = String(topic || '');
+
+  if (shouldUseSplitCombine(normalizedTopic, safeOperation, safeLevel)) {
+    return buildSplitCombineVisual(topic, safeLevel, safeOperation, num1, num2, seed);
+  }
+
+  if (shouldUseBase10Blocks(normalizedTopic, safeLevel)) {
+    return buildBase10BlocksVisual(topic, safeLevel, safeOperation, num1, num2, seed);
+  }
+
+  if (shouldUseFractionCuts(normalizedTopic, safeLevel)) {
+    return buildFractionVisual(topic, safeLevel, safeOperation, answer, seed);
+  }
+
   if (!hasVisual) return null;
 
   if (shapeTopic || dataTopic || clockTopic || compareTopic || measurementTopic) {
@@ -397,22 +524,24 @@ const buildVisualProblem = (topic, title = '', operation = '+') => {
   return null;
 };
 
+const makeProblemSeed = ({
+  level = 1,
+  operation = '+',
+  topic = '',
+  chapterId = '',
+  chapterTitle = '',
+  num1 = 0,
+  num2 = 0,
+  answer = 0
+}) => {
+  return toSeedNumber(`v2-${level}-${operation}-${topic}-${chapterId}-${chapterTitle}-${num1}-${num2}-${answer}-${Date.now()}-${randomInt(1000, 999999)}`);
+};
+
 export const generateProblem = (level = 1, operation = '+', options = {}) => {
   const safeLevel = clampLevel(level);
   const safeOp = ['+', '-', '*', '/'].includes(operation) ? operation : '+';
   const topic = String(options?.topic || '');
   const chapterTitle = String(options?.chapterTitle || '');
-
-  const visual = buildVisualProblem(topic, chapterTitle, safeOp);
-  if (visual) {
-    return {
-      ...visual,
-      level: safeLevel,
-      topic,
-      chapterTitle,
-      chapterId: String(options?.chapterId || '')
-    };
-  }
 
   const operationGenerators = {
     '+': generateAdditionProblem,
@@ -444,15 +573,35 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
   }
 
   const fixedAnswer = Number.isFinite(explicitAnswer) ? explicitAnswer : answer;
-  return {
+  const problemSeed = makeProblemSeed({
+    level: safeLevel,
+    operation: safeOp,
+    topic,
+    chapterId: String(options?.chapterId || ''),
+    chapterTitle,
     num1,
     num2,
+    answer: fixedAnswer
+  });
+  const visualBuild = buildVisualProblem(topic, chapterTitle, safeOp, safeLevel, num1, num2, fixedAnswer, problemSeed);
+  const visual = visualBuild?.visual || visualBuild;
+  const finalNum1 = Number.isFinite(visualBuild?.num1) ? visualBuild.num1 : num1;
+  const finalNum2 = Number.isFinite(visualBuild?.num2) ? visualBuild.num2 : num2;
+  const finalAnswer = Number.isFinite(visual?.answer)
+    ? visual.answer
+    : (isFractionOrDecimalTopic(topic) ? roundToDecimal(fixedAnswer, 1) : fixedAnswer);
+
+  return {
+    num1: finalNum1,
+    num2: finalNum2,
     operator: safeOp,
-    answer: isFractionOrDecimalTopic(topic) ? roundToDecimal(fixedAnswer, 1) : fixedAnswer,
+    answer: finalAnswer,
+    seed: String(problemSeed),
     level: safeLevel,
     topic,
     chapterTitle,
-    chapterId: String(options?.chapterId || '')
+    chapterId: String(options?.chapterId || ''),
+    ...(visual ? { visual } : {})
   };
 };
 

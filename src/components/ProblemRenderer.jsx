@@ -1,4 +1,9 @@
 import React from 'react';
+import {
+  ManipulativeBase10,
+  ManipulativeFractionCuts,
+  ManipulativeSplitCombine
+} from './ui/InteractiveGrid';
 
 const toSeedNumber = (raw) => {
   const source = String(raw ?? '');
@@ -130,6 +135,21 @@ export const ProblemRenderer = ({ problem }) => {
 
   if (!problem.visual) {
     return <p className="problem-text">{problem.num1} {problem.operator} {problem.num2} = ?</p>;
+  }
+
+  if (problem.visual.type === 'interactive') {
+    const seed = problem.seed || problem.visual.seed;
+    if (problem.visual.subType === 'split-combine') {
+      return <ManipulativeSplitCombine visual={problem.visual} seed={seed} />;
+    }
+
+    if (problem.visual.subType === 'base-10-blocks') {
+      return <ManipulativeBase10 visual={problem.visual} seed={seed} />;
+    }
+
+    if (problem.visual.subType === 'fraction-cuts') {
+      return <ManipulativeFractionCuts visual={problem.visual} seed={seed} />;
+    }
   }
 
   if (problem.visual.type === 'count-shapes') return <ShapeGroup visual={problem.visual} />;
