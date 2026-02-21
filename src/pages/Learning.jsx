@@ -6,10 +6,21 @@ import ProgressBar from '../components/ui/ProgressBar';
 import { generateProblem } from '../utils/mathEngine';
 import { saveWrongProblem } from '../utils/storageEngine';
 import curriculumCatalog, { getCurriculumById } from '../data/curriculum';
-import { getLearningProgressMap, saveLearningProgress } from '../utils/learningProgress';
+import { getLearningProgressMap, getLearningStreak, saveLearningProgress } from '../utils/learningProgress';
+import {
+  createPlaceInputState,
+  getDigitsFromNumber,
+  getSemiStepDisplay,
+  isSemiStepCandidate,
+  initialActivePlaceIndex,
+  nextSemiStepActiveIndex,
+  normalizeIndexInput,
+  toSemiStepValue
+} from '../utils/semiStepUtils';
 
 const HINT_STEPS = 3;
 const HINT_TRIGGER_STEP = 1;
+const CONFETTI_COUNT = 24;
 const clampHintStep = (value) => Math.max(1, Math.min(value, HINT_STEPS));
 
 const formatAppleRow = (count) => {
@@ -81,35 +92,80 @@ const buildLearningHint = (problem, wrongAttempts) => {
   return '숫자 하나씩 천천히 따라 해보세요.';
 };
 
-const getDigitsFromNumber = (number) => {
-  const normalized = Math.max(0, Math.floor(Math.abs(Number(number) || 0)));
-  return String(normalized).split('').reverse();
+const createCarryBorrowGuide = (problem = null) => {
+  if (!problem || !['+', '-'].includes(problem.operator)) {
+    return { carry: {}, borrow: {} };
+  }
+
+  const operator = problem.operator;
+  const num1Digits = getDigitsFromNumber(problem.num1);
+  const num2Digits = getDigitsFromNumber(problem.num2);
+  const maxLen = Math.max(num1Digits.length, num2Digits.length);
+  const carry = {};
+  const borrow = {};
+
+  if (operator === '+') {
+    let carryOver = 0;
+    for (let i = 0; i < maxLen; i += 1) {
+      const n1 = Number(num1Digits[i] || 0);
+      const n2 = Number(num2Digits[i] || 0);
+      const total = n1 + n2 + carryOver;
+
+      if (Math.floor(total / 10) > 0) {
+        carry[i + 1] = 1;
+      }
+
+      carryOver = Math.floor(total / 10);
+    }
+    return { carry, borrow };
+  }
+
+  let borrowFromLower = 0;
+  for (let i = 0; i < maxLen; i += 1) {
+    const n1 = Number(num1Digits[i] || 0) - borrowFromLower;
+    const n2 = Number(num2Digits[i] || 0);
+
+    if (n1 < n2) {
+      borrow[i + 1] = 1;
+      borrowFromLower = 1;
+    } else {
+      borrowFromLower = 0;
+    }
+  }
+
+  return { carry, borrow };
 };
 
-const isSemiStepCandidate = (chapter, problem) => {
-  if (!chapter || !problem) return false;
-  if (chapter.level < 2) return false;
-  const op = problem.operator;
-  const isBigProblem = Math.abs(problem.num1) >= 10 || Math.abs(problem.num2) >= 10;
-  const isLongAnswer = getDigitsFromNumber(problem.answer).length > 1;
-  if (op === '/' && chapter.level < 4) return false;
-  return isBigProblem || isLongAnswer;
+const createConfettiPieces = () => {
+  const colors = ['#FF7E67', '#FFD460', '#A2D5AB', '#3F72AF', '#F7A072'];
+  return Array.from({ length: CONFETTI_COUNT }, (_, index) => ({
+    id: `confetti-${index}-${Date.now()}`,
+    left: `${Math.random() * 100}%`,
+    driftX: `${(Math.random() * 100 - 50).toFixed(1)}px`,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    size: 6 + Math.floor(Math.random() * 7),
+    delay: `${(Math.random() * 0.65).toFixed(2)}s`,
+    duration: `${(1.2 + Math.random() * 1.2).toFixed(2)}s`,
+    borderRadius: Math.random() < 0.5 ? '50%' : '2px',
+    rotation: `${Math.floor(Math.random() * 360)}deg`
+  }));
+};
+
+const getGuideLabel = (guide = {}, index = 0, operator = '') => {
+  if (operator === '+' && guide.carry?.[index]) {
+    return { type: 'carry', text: `+${guide.carry[index]}` };
+  }
+
+  if (operator === '-' && guide.borrow?.[index]) {
+    return { type: 'borrow', text: '↘1' };
+  }
+
+  return null;
 };
 
 const placeLabel = (index) => {
   const bases = ['일', '십', '백', '천', '만'];
   return `${bases[index] || `${index}의`} 자리`;
-};
-
-const normalizeIndexInput = (value) => {
-  const next = value.replace(/[^0-9]/g, '');
-  return next.slice(-1);
-};
-
-const getSemiStepDisplay = (placeInputs) => {
-  const digits = placeInputs.slice().reverse();
-  const text = digits.join('');
-  return text || '0';
 };
 
 const pickRandomOperation = (chapter) => {
@@ -136,10 +192,19 @@ const Learning = () => {
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [progressMap, setProgressMap] = useState(() => getLearningProgressMap());
+  const [streakCount, setStreakCount] = useState(() => getLearningStreak().streak);
+  const [confettiPieces, setConfettiPieces] = useState([]);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [semiStepGuide, setSemiStepGuide] = useState({ carry: {}, borrow: {} });
+  const [tutorialStep, setTutorialStep] = useState(0);
 
   const selectedChapter = getCurriculumById(selectedChapterId);
   const total = selectedChapter ? selectedChapter.questionCount : 0;
   const selectedChapterProgress = selectedChapter ? progressMap[selectedChapter.id] : null;
+  const tutorialSteps = selectedChapter?.tutorialSteps?.length
+    ? selectedChapter.tutorialSteps
+    : (selectedChapter?.concept || []);
+  const activeTutorialStep = tutorialSteps[tutorialStep] || null;
 
   const hasResumeProgress = Boolean(
     selectedChapterProgress &&
@@ -160,6 +225,7 @@ const Learning = () => {
     });
 
     setProgressMap(next);
+    setStreakCount(getLearningStreak().streak);
   };
 
   const configureProblemState = (nextProblem) => {
@@ -173,13 +239,14 @@ const Learning = () => {
     setIsSemiStep(useSemiStep);
 
     if (useSemiStep) {
-      const answerDigits = getDigitsFromNumber(nextProblem?.answer || 0);
-      setPlaceInputs(Array.from({ length: answerDigits.length || 1 }, () => ''));
-      setActivePlaceIndex(0);
+      setSemiStepGuide(createCarryBorrowGuide(nextProblem));
+      setPlaceInputs(createPlaceInputState(nextProblem?.answer || 0));
+      setActivePlaceIndex(initialActivePlaceIndex(nextProblem?.answer || 0));
       setInput('');
       return;
     }
 
+    setSemiStepGuide({ carry: {}, borrow: {} });
     setPlaceInputs([]);
     setActivePlaceIndex(0);
     setInput('');
@@ -207,6 +274,11 @@ const Learning = () => {
     setWrongAttempts(0);
     setIsHintOpen(false);
     setIsFinished(false);
+    setShowConfetti(false);
+    setConfettiPieces([]);
+    setSemiStepGuide({ carry: {}, borrow: {} });
+    setTutorialStep(0);
+    setStreakCount(getLearningStreak().streak);
     setProgressMap(getLearningProgressMap());
   };
 
@@ -239,6 +311,11 @@ const Learning = () => {
     setWrongAttempts(0);
     setIsHintOpen(false);
     setIsFinished(false);
+    setShowConfetti(false);
+    setConfettiPieces([]);
+    setTutorialStep(0);
+    setSemiStepGuide({ carry: {}, borrow: {} });
+    setStreakCount(getLearningStreak().streak);
   };
 
   const startProblems = (resume = false) => {
@@ -259,6 +336,9 @@ const Learning = () => {
     setIsCorrect(false);
     setIsWrong(false);
     setIsHintOpen(false);
+    setShowConfetti(false);
+    setConfettiPieces([]);
+    setTutorialStep(0);
 
     if (safeIndex >= total) {
       setProblem(null);
@@ -277,6 +357,8 @@ const Learning = () => {
     if (nextIndex >= total) {
       setIsFinished(true);
       setIsCorrect(false);
+      setShowConfetti(true);
+      setConfettiPieces(createConfettiPieces());
       syncProgress({
         currentIndex: nextIndex,
         score: nextScore,
@@ -304,12 +386,7 @@ const Learning = () => {
       return Number.isFinite(numeric) ? numeric : null;
     }
 
-    if (!placeInputs.length) return null;
-    if (placeInputs.some((value) => value === '')) return null;
-
-    const value = placeInputs.slice().reverse().join('');
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
+    return toSemiStepValue(placeInputs);
   };
 
   const handleSubmit = () => {
@@ -343,6 +420,13 @@ const Learning = () => {
     setTimeout(() => setIsWrong(false), 350);
   };
 
+  const handleTutorialStep = (nextStep) => {
+    if (!tutorialSteps.length) return;
+    const last = tutorialSteps.length - 1;
+    const safe = Math.max(0, Math.min(nextStep, last));
+    setTutorialStep(safe);
+  };
+
   const handlePlaceKeyPress = (key) => {
     if (isFinished || !isSemiStep) return;
 
@@ -374,7 +458,7 @@ const Learning = () => {
 
       return next;
     });
-    setActivePlaceIndex((prev) => Math.min(prev + 1, placeInputs.length - 1));
+    setActivePlaceIndex((prev) => nextSemiStepActiveIndex(prev));
   };
 
   const handleKeyPress = (key) => {
@@ -403,6 +487,8 @@ const Learning = () => {
   const currentAnswerText = isSemiStep ? getSemiStepDisplay(placeInputs) : (input || '0');
   const hintText = problem ? buildLearningHint(problem, wrongAttempts) : null;
   const shouldAutoHint = wrongAttempts >= HINT_TRIGGER_STEP;
+  const canPrevStep = tutorialStep > 0;
+  const canNextStep = tutorialStep < tutorialSteps.length - 1;
 
   return (
     <div className="container animate-fade-in" style={{ justifyContent: 'flex-start', paddingTop: '1rem' }}>
@@ -413,6 +499,7 @@ const Learning = () => {
             <p className="subtitle" style={{ marginBottom: '1rem' }}>
               학습할 단원을 골라주세요.
             </p>
+            {streakCount > 0 ? <p className="streak-banner">🔥 {streakCount}일 연속 공부 중!</p> : null}
             <div className="curriculum-list">
               {curriculumCatalog.map((chapter) => {
                 const chapterProgress = progressMap[chapter.id] || {};
@@ -442,7 +529,10 @@ const Learning = () => {
                       </div>
                     </div>
                     <p className="curriculum-description">{chapter.description}</p>
-                    <p className="curriculum-meta">진행: {progressText}</p>
+                      <p className="curriculum-meta">진행: {progressText}</p>
+                    {done ? (
+                      <span className="chapter-badge done">🏅 완료</span>
+                    ) : null}
                     <span className={`chapter-badge ${done ? 'done' : 'ready'}`}>
                       {done ? '복습하기' : chapterProgress.currentIndex ? '이어하기' : '시작하기'}
                     </span>
@@ -463,11 +553,40 @@ const Learning = () => {
               <p className="curriculum-description" style={{ marginTop: '0.6rem' }}>
                 {selectedChapter.description}
               </p>
-              <ul className="tutorial-points">
-                {selectedChapter.concept.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+              {tutorialSteps.length ? (
+                <div className="tutorial-steps">
+                  <p className="tutorial-step-meta">
+                    개념 가이드 ({Math.min(tutorialStep + 1, tutorialSteps.length)}/{tutorialSteps.length})
+                  </p>
+                  <p className="tutorial-step-content">{activeTutorialStep}</p>
+                  {tutorialSteps.length > 1 ? (
+                    <div className="tutorial-step-actions">
+                      <button
+                        type="button"
+                        className="glass-btn secondary-bg"
+                        onClick={() => handleTutorialStep(tutorialStep - 1)}
+                        disabled={!canPrevStep}
+                      >
+                        이전
+                      </button>
+                      <button
+                        type="button"
+                        className="glass-btn secondary-bg"
+                        onClick={() => handleTutorialStep(tutorialStep + 1)}
+                        disabled={!canNextStep}
+                      >
+                        다음
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <ul className="tutorial-points">
+                  {selectedChapter.concept.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              )}
               <div className="tutorial-actions">
                 <button
                   type="button"
@@ -509,6 +628,27 @@ const Learning = () => {
 
             {isFinished ? (
               <div className="result-overlay">
+                {showConfetti ? (
+                  <div className="confetti-layer" aria-hidden="true">
+                    {confettiPieces.map((piece) => (
+                      <span
+                        key={piece.id}
+                        className="confetti-piece"
+                        style={{
+                          left: piece.left,
+                          '--drift-x': piece.driftX,
+                          '--duration': piece.duration,
+                          '--delay': piece.delay,
+                          '--rotation': piece.rotation,
+                          width: `${piece.size}px`,
+                          height: `${piece.size}px`,
+                          borderRadius: piece.borderRadius,
+                          backgroundColor: piece.color
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 <div className="result-card glass-panel">
                   <h3 className="result-title">학습 완료!</h3>
                   <p className="result-sub">
@@ -539,6 +679,8 @@ const Learning = () => {
                     <div className="semi-answer-wrap">
                       {placeInputs.map((value, displayIndex) => {
                         const reversedIndex = placeInputs.length - 1 - displayIndex;
+                        const guide = getGuideLabel(semiStepGuide, reversedIndex, problem.operator);
+
                         return (
                           <button
                             key={reversedIndex}
@@ -546,6 +688,11 @@ const Learning = () => {
                             className={`semi-answer-cell ${activePlaceIndex === reversedIndex ? 'active' : ''}`}
                             onClick={() => setActivePlaceIndex(reversedIndex)}
                           >
+                            {guide ? (
+                              <span className={`semi-step-guide ${guide.type}`}>
+                                {guide.text}
+                              </span>
+                            ) : null}
                             <span className="semi-answer-label">
                               {placeLabel(reversedIndex)}
                             </span>
