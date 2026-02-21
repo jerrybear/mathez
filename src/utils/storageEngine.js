@@ -8,7 +8,7 @@ const readStorage = () => {
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed;
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -18,7 +18,7 @@ const writeStorage = (list) => {
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch (error) {
+  } catch {
     // no-op
   }
 };
