@@ -7,6 +7,9 @@ export const isSemiStepCandidate = (chapter, problem) => {
   if (!chapter || !problem) return false;
   if (chapter.level < 2) return false;
   const op = problem.operator;
+  if (!Number.isInteger(Number(problem.num1)) || !Number.isInteger(Number(problem.num2)) || !Number.isInteger(Number(problem.answer))) {
+    return false;
+  }
   const isBigProblem = Math.abs(problem.num1) >= 10 || Math.abs(problem.num2) >= 10;
   const isLongAnswer = getDigitsFromNumber(problem.answer).length > 1;
   if (op === '/' && chapter.level < 4) return false;

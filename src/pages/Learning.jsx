@@ -22,6 +22,8 @@ const HINT_STEPS = 3;
 const HINT_TRIGGER_STEP = 1;
 const CONFETTI_COUNT = 24;
 const clampHintStep = (value) => Math.max(1, Math.min(value, HINT_STEPS));
+const GRADE_OPTIONS = [1, 2, 3];
+const SEMESTER_OPTIONS = [1, 2];
 
 const formatAppleRow = (count) => {
   const safeCount = Math.max(0, Number(count) || 0);
@@ -197,6 +199,8 @@ const Learning = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [semiStepGuide, setSemiStepGuide] = useState({ carry: {}, borrow: {} });
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [selectedGrade, setSelectedGrade] = useState(1);
+  const [selectedSemester, setSelectedSemester] = useState(1);
 
   const selectedChapter = getCurriculumById(selectedChapterId);
   const total = selectedChapter ? selectedChapter.questionCount : 0;
@@ -205,6 +209,43 @@ const Learning = () => {
     ? selectedChapter.tutorialSteps
     : (selectedChapter?.concept || []);
   const activeTutorialStep = tutorialSteps[tutorialStep] || null;
+  const filteredCurriculum = curriculumCatalog.filter(
+    (chapter) =>
+      Number(chapter.grade) === Number(selectedGrade) &&
+      Number(chapter.semester) === Number(selectedSemester)
+  );
+  const gradeCurriculum = curriculumCatalog.filter(
+    (chapter) => Number(chapter.grade) === Number(selectedGrade)
+  );
+  const gradeTotalQuestions = gradeCurriculum.reduce((sum, chapter) => {
+    const count = Number(chapter.questionCount);
+    return sum + (Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0);
+  }, 0);
+  const gradeCompletedQuestions = gradeCurriculum.reduce((sum, chapter) => {
+    const chapterProgress = progressMap[chapter.id];
+    if (!chapterProgress) return sum;
+    if (chapterProgress.completed) return sum + Number(chapter.questionCount || 0);
+    return sum + Math.max(0, Number(chapterProgress.currentIndex || 0));
+  }, 0);
+  const gradeCompletedChapters = gradeCurriculum.reduce((sum, chapter) => {
+    return progressMap[chapter.id]?.completed ? sum + 1 : sum;
+  }, 0);
+  const semesterCompletedChapters = filteredCurriculum.reduce((sum, chapter) => {
+    return progressMap[chapter.id]?.completed ? sum + 1 : sum;
+  }, 0);
+  const safeGradeCompletedQuestions = Math.max(0, Math.round(gradeCompletedQuestions));
+  const safeGradeTotalQuestions = Math.max(0, Math.round(gradeTotalQuestions));
+
+  const handleGradeSelect = (grade) => {
+    const normalizedGrade = Number(grade);
+    setSelectedGrade(normalizedGrade);
+    setSelectedSemester(1);
+    setProgressMap(getLearningProgressMap());
+  };
+
+  const handleSemesterSelect = (semester) => {
+    setSelectedSemester(Number(semester));
+  };
 
   const hasResumeProgress = Boolean(
     selectedChapterProgress &&
@@ -255,7 +296,8 @@ const Learning = () => {
   const createProblem = () => (selectedChapter
     ? generateProblem(
       selectedChapter.level,
-      pickRandomOperation(selectedChapter)
+      pickRandomOperation(selectedChapter),
+      { topic: selectedChapter.topic, chapterId: selectedChapter.id }
     )
     : null);
 
@@ -469,6 +511,12 @@ const Learning = () => {
       return;
     }
 
+    if (key === '.') {
+      if (input.includes('.')) return;
+      setInput((prev) => (prev.length ? `${prev}.` : '0.'));
+      return;
+    }
+
     if (key === 'del') {
       setInput((prev) => prev.slice(0, -1));
       return;
@@ -500,8 +548,57 @@ const Learning = () => {
               학습할 단원을 골라주세요.
             </p>
             {streakCount > 0 ? <p className="streak-banner">🔥 {streakCount}일 연속 공부 중!</p> : null}
+            <div className="curriculum-filter-wrap">
+              <div className="curriculum-filter-row">
+                <p className="curriculum-filter-title">학년</p>
+                {GRADE_OPTIONS.map((grade) => {
+                  const isActive = grade === selectedGrade;
+                  return (
+                    <button
+                      type="button"
+                      key={grade}
+                      className={`curriculum-filter-chip ${isActive ? 'active' : ''}`}
+                      onClick={() => handleGradeSelect(grade)}
+                    >
+                      {grade}학년
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="curriculum-filter-row">
+                <p className="curriculum-filter-title">학기</p>
+                {SEMESTER_OPTIONS.map((semester) => {
+                  const isActive = semester === selectedSemester;
+                  return (
+                    <button
+                      type="button"
+                      key={semester}
+                      className={`curriculum-filter-chip ${isActive ? 'active' : ''}`}
+                      onClick={() => handleSemesterSelect(semester)}
+                    >
+                      {semester}학기
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="curriculum-summary glass-panel">
+              <p className="curriculum-summary-title">
+                {selectedGrade}학년 학업 진척도
+              </p>
+              <ProgressBar current={safeGradeCompletedQuestions} total={safeGradeTotalQuestions} />
+              <p className="curriculum-summary-meta">
+                {selectedSemester}학기 단원: {semesterCompletedChapters}/{filteredCurriculum.length} 완료
+              </p>
+              <p className="curriculum-summary-meta">
+                학년 전체: {gradeCompletedChapters}/{gradeCurriculum.length} 단원, {safeGradeCompletedQuestions}/{safeGradeTotalQuestions}문항
+              </p>
+            </div>
+            {filteredCurriculum.length === 0 ? (
+              <p className="curriculum-empty">해당 학년/학기 조합의 단원이 아직 없습니다.</p>
+            ) : null}
             <div className="curriculum-list">
-              {curriculumCatalog.map((chapter) => {
+              {filteredCurriculum.map((chapter) => {
                 const chapterProgress = progressMap[chapter.id] || {};
                 const done = Boolean(chapterProgress.completed);
                 const progressText = done
@@ -524,7 +621,7 @@ const Learning = () => {
                       <div>
                         <p className="curriculum-title">{chapter.title}</p>
                         <p className="curriculum-subtitle">
-                          레벨 {chapter.level} · {chapter.topic}
+                          레벨 {chapter.level} · {chapter.grade}학년 {chapter.semester}학기
                         </p>
                       </div>
                     </div>

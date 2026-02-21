@@ -6,7 +6,8 @@ const Keypad = ({ onKeyPress }) => {
         1, 2, 3,
         4, 5, 6,
         7, 8, 9,
-        'del', 0, 'enter'
+        'del', 0, '.',
+        'enter'
     ];
 
     const handlePress = (key) => {
@@ -33,6 +34,9 @@ const Keypad = ({ onKeyPress }) => {
                 } else if (key === 'enter') {
                     content = <Check size={28} />;
                     btnClass += ' primary-bg';
+                } else if (key === '.') {
+                    content = '.';
+                    style.fontSize = '2rem';
                 } else {
                     // Add a subtle background to number keys for better contrast
                     style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
