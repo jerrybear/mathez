@@ -31,6 +31,20 @@ export const getOperationsByLevel = (level) => {
 const isThreeDigitTopic = (topic) => topic === 'three-digit';
 const isFourDigitTopic = (topic) => topic === 'four-digit';
 const isFractionOrDecimalTopic = (topic) => topic === 'fraction-decimal';
+const isShapeTopic = (topic) => ['shapes', 'geometry-figures', 'circle'].includes(topic);
+const isClockTopic = (topic, title = '') => {
+  const normalized = String(topic || '').toLowerCase();
+  const normalizedTitle = String(title || '').toLowerCase();
+  return normalized === 'clock-reading'
+    || normalized === 'time'
+    || normalized === 'clock'
+    || normalized === 'subtraction-borrow'
+    || normalizedTitle.includes('시계')
+    || normalizedTitle.includes('시간');
+};
+const isDataTopic = (topic) => topic === 'data';
+
+const pickRandom = (items) => items[randomInt(0, items.length - 1)];
 
 const generateAdditionProblem = (level, topic = '') => {
   const safeLevel = clampLevel(level);
@@ -122,7 +136,7 @@ const generateSubtractionProblem = (level, topic = '') => {
   }
 
   if (safeLevel === 2) {
-    if (normalizedTopic === 'three-digit') {
+    if (isThreeDigitTopic(normalizedTopic)) {
       const num1 = randomInt(100, 999);
       const num2 = randomInt(10, num1);
       return { num1, num2 };
@@ -234,8 +248,7 @@ const generateDivisionProblem = (level, topic = '') => {
       return {
         num1: num2 * answer,
         num2,
-        answer,
-        fractionHint: 'decimal-ready'
+        answer
       };
     }
 
@@ -255,22 +268,118 @@ const generateDivisionProblem = (level, topic = '') => {
   return { num1: num2 * answer, num2, answer };
 };
 
+const buildShapeVisual = () => {
+  const shapes = ['🔺', '🟦', '🟡', '🟩', '◼️', '🟣', '🔷'];
+  const itemCount = randomInt(5, 10);
+  const target = pickRandom(shapes);
+  const items = Array.from({ length: itemCount }, () => pickRandom(shapes));
+
+  const answer = items.filter((item) => item === target).length;
+  return {
+    type: 'count-shapes',
+    target,
+    items,
+    layout: 'random',
+    answer
+  };
+};
+
+const buildClockVisual = () => {
+  const hour = randomInt(1, 12);
+  const minuteOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+  const minute = pickRandom(minuteOptions);
+
+  const answer = Number(String(hour).padStart(2, '0') + String(minute).padStart(2, '0'));
+  return {
+    type: 'clock-reading',
+    time: { hour, minute },
+    answer
+  };
+};
+
+const buildDataVisual = () => {
+  const labels = ['🍎', '🍊', '🍌', '🍇', '🍑'];
+  const count = randomInt(2, 5);
+  const selected = [...labels].sort(() => Math.random() - 0.5).slice(0, count);
+  const data = selected.map((label) => ({
+    label,
+    value: randomInt(1, 7)
+  }));
+  for (let i = 0; i < 10; i += 1) {
+    const sorted = [...data].sort((a, b) => b.value - a.value);
+    if (sorted.length >= 2 && sorted[0].value > sorted[1].value) {
+      break;
+    }
+    const targetIndex = data.findIndex((entry) => entry.label === sorted[1].label);
+    if (targetIndex >= 0) {
+      data[targetIndex].value = Math.max(0, data[targetIndex].value - 1);
+    }
+  }
+
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  const question = `${sorted[0].label}는 ${sorted[1].label}보다 몇 개 더 많나요?`;
+  const answer = sorted[0].value - sorted[1].value;
+
+  return {
+    type: 'chart-bar',
+    data,
+    question,
+    answer
+  };
+};
+
+const buildVisualProblem = (topic, title = '', operation = '+') => {
+  const shapeTopic = isShapeTopic(topic);
+  const clockTopic = isClockTopic(topic, title);
+  const dataTopic = isDataTopic(topic);
+
+  if (shapeTopic || dataTopic || clockTopic) {
+    const visual = shapeTopic ? buildShapeVisual()
+      : clockTopic ? buildClockVisual()
+        : buildDataVisual();
+
+    const answer = visual.answer;
+
+    return {
+      num1: 0,
+      num2: 0,
+      operator: operation,
+      answer,
+      visual
+    };
+  }
+
+  return null;
+};
+
 export const generateProblem = (level = 1, operation = '+', options = {}) => {
   const safeLevel = clampLevel(level);
   const safeOp = ['+', '-', '*', '/'].includes(operation) ? operation : '+';
-  const topic = String(options?.topic || options?.topicId || '');
+  const topic = String(options?.topic || '');
+  const chapterTitle = String(options?.chapterTitle || '');
+
+  const visual = buildVisualProblem(topic, chapterTitle, safeOp);
+  if (visual) {
+    return {
+      ...visual,
+      level: safeLevel,
+      topic,
+      chapterTitle,
+      chapterId: String(options?.chapterId || '')
+    };
+  }
 
   const operationGenerators = {
-    '+': (value) => generateAdditionProblem(value, topic),
-    '-': (value) => generateSubtractionProblem(value, topic),
-    '*': (value) => generateMultiplicationProblem(value, topic),
-    '/': (value) => generateDivisionProblem(value, topic)
+    '+': generateAdditionProblem,
+    '-': generateSubtractionProblem,
+    '*': generateMultiplicationProblem,
+    '/': generateDivisionProblem
   };
 
-  const generated = operationGenerators[safeOp](safeLevel);
-  const { num1 = 0, num2 = 0, answer: rawAnswer } = generated || {};
-  let answer = 0;
+  const generated = operationGenerators[safeOp](safeLevel, topic);
+  const { num1 = 0, num2 = 0, answer: explicitAnswer } = generated || {};
 
+  let answer = 0;
   switch (safeOp) {
     case '+':
       answer = num1 + num2;
@@ -289,15 +398,16 @@ export const generateProblem = (level = 1, operation = '+', options = {}) => {
       break;
   }
 
-  const fixedAnswer = Number.isFinite(rawAnswer) ? rawAnswer : answer;
-
+  const fixedAnswer = Number.isFinite(explicitAnswer) ? explicitAnswer : answer;
   return {
     num1,
     num2,
     operator: safeOp,
     answer: isFractionOrDecimalTopic(topic) ? roundToDecimal(fixedAnswer, 1) : fixedAnswer,
     level: safeLevel,
-    topic
+    topic,
+    chapterTitle,
+    chapterId: String(options?.chapterId || '')
   };
 };
 
@@ -311,11 +421,22 @@ export const generateRandomProblem = (level = 1) => {
 export const generateSimilarProblem = (wrongProblem) => {
   if (!wrongProblem || typeof wrongProblem !== 'object') return null;
 
-  const { num1, num2, operator, level } = wrongProblem;
+  if (wrongProblem.visual && wrongProblem.topic) {
+    return generateProblem(wrongProblem.level, wrongProblem.operator, {
+      topic: wrongProblem.topic,
+      chapterId: wrongProblem.chapterId || '',
+      chapterTitle: wrongProblem.chapterTitle || ''
+    });
+  }
+
+  const { num1, num2, operator, level, topic = '', chapterTitle = '' } = wrongProblem;
   const safeNum1 = Number(num1);
   const safeNum2 = Number(num2);
   const safeLevel = clampLevel(level);
-  const safeTopic = String(wrongProblem?.topic || '').trim();
+  const normalizedTopic = String(topic || '');
+  const isDecimalTopic = isFractionOrDecimalTopic(normalizedTopic)
+    || !Number.isInteger(safeNum1)
+    || !Number.isInteger(safeNum2);
 
   if (!Number.isFinite(safeNum1) || !Number.isFinite(safeNum2) || !['+', '-', '*', '/'].includes(operator)) {
     return null;
@@ -326,10 +447,6 @@ export const generateSimilarProblem = (wrongProblem) => {
   const maxDelta = Math.max(minDelta, Math.floor(base * 0.2));
   const clampPositiveInteger = (value) => Math.max(0, Math.round(value));
   const clampDecimal = (value) => roundToDecimal(Math.max(0, value), 1);
-
-  const isDecimalTopic = isFractionOrDecimalTopic(safeTopic)
-    || !Number.isInteger(safeNum1)
-    || !Number.isInteger(safeNum2);
 
   const mutateNumber = (value) => {
     if (isDecimalTopic) {
@@ -383,7 +500,9 @@ export const generateSimilarProblem = (wrongProblem) => {
         operator,
         answer: isDecimalTopic ? roundToDecimal(computeAnswer(nextNum1, nextNum2, operator), 1) : computeAnswer(nextNum1, nextNum2, operator),
         level: safeLevel,
-        topic: safeTopic
+        topic: normalizedTopic,
+        chapterTitle,
+        chapterId: String(wrongProblem?.chapterId || '')
       };
     }
 
@@ -391,7 +510,10 @@ export const generateSimilarProblem = (wrongProblem) => {
       const baseAnswer = safeNum2 === 0 ? 1 : Math.round(safeNum1 / safeNum2);
       const baseDivisor = Math.max(1, safeNum2);
       const divisorDelta = randomInt(minDelta, maxDelta);
-      const nextDivisor = Math.max(1, clampPositiveInteger(baseDivisor + (Math.random() < 0.5 ? -divisorDelta : divisorDelta)));
+      const nextDivisor = Math.max(
+        1,
+        clampPositiveInteger(baseDivisor + (Math.random() < 0.5 ? -divisorDelta : divisorDelta))
+      );
       const nextAnswer = Math.max(1, baseAnswer + randomInt(-2, 2));
       const nextDividend = nextDivisor * nextAnswer;
 
@@ -403,7 +525,9 @@ export const generateSimilarProblem = (wrongProblem) => {
         operator,
         answer: nextAnswer,
         level: safeLevel,
-        topic: safeTopic
+        topic: normalizedTopic,
+        chapterTitle,
+        chapterId: String(wrongProblem?.chapterId || '')
       };
     }
 
@@ -413,9 +537,15 @@ export const generateSimilarProblem = (wrongProblem) => {
       operator,
       answer: isDecimalTopic ? roundToDecimal(computeAnswer(nextNum1, nextNum2, operator), 1) : computeAnswer(nextNum1, nextNum2, operator),
       level: safeLevel,
-      topic: safeTopic
+      topic: normalizedTopic,
+      chapterTitle,
+      chapterId: String(wrongProblem?.chapterId || '')
     };
   }
 
-  return generateProblem(safeLevel, operator, { topic: safeTopic });
+  return generateProblem(safeLevel, operator, {
+    topic: normalizedTopic,
+    chapterId: String(wrongProblem?.chapterId || ''),
+    chapterTitle
+  });
 };

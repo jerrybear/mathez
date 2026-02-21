@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Keypad from '../components/ui/Keypad';
 import ProgressBar from '../components/ui/ProgressBar';
+import { ProblemRenderer } from '../components/ProblemRenderer';
 import { generateProblem } from '../utils/mathEngine';
 import { saveWrongProblem } from '../utils/storageEngine';
 import curriculumCatalog, { getCurriculumById } from '../data/curriculum';
@@ -137,6 +138,7 @@ const createCarryBorrowGuide = (problem = null) => {
 
   return { carry, borrow };
 };
+
 
 const createConfettiPieces = () => {
   const colors = ['#FF7E67', '#FFD460', '#A2D5AB', '#3F72AF', '#F7A072'];
@@ -297,7 +299,7 @@ const Learning = () => {
     ? generateProblem(
       selectedChapter.level,
       pickRandomOperation(selectedChapter),
-      { topic: selectedChapter.topic, chapterId: selectedChapter.id }
+      { topic: selectedChapter.topic, chapterId: selectedChapter.id, chapterTitle: selectedChapter.title }
     )
     : null);
 
@@ -769,9 +771,7 @@ const Learning = () => {
               <>
                 <div className="problem-card glass-panel">
                   <p className="problem-caption">현재 문제</p>
-                  <p className="problem-text">
-                    {problem?.num1} {problem?.operator} {problem?.num2} = ?
-                  </p>
+                  <ProblemRenderer problem={problem} />
                   {isSemiStep ? (
                     <div className="semi-answer-wrap">
                       {placeInputs.map((value, displayIndex) => {
