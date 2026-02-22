@@ -440,8 +440,8 @@ const buildCountingVisual = () => {
 
 const buildZeroVisual = () => ({
   type: 'zero-concept',
-  count: 0,
-  prompt: '빈 접시에 사과가 몇 개 있나요?'
+  count: randomInt(0, 9),
+  prompt: '접시에 사과가 몇 개 있나요?'
 });
 
 const buildSequenceVisual = () => {
@@ -532,7 +532,7 @@ const generateNumberBasicsProblem = (level = 1, operation = '+', options = {}) =
     return {
       num1: 0,
       num2: 0,
-      answer: 0,
+      answer: visual.count,
       visual
     };
   }

@@ -395,18 +395,60 @@ body {
   align-items: center;
 }
 
-.zero-slot-grid {
-  width: min(320px, 100%);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.42rem;
+.zero-plate-stage {
+  width: min(340px, 100%);
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(63, 114, 175, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0.35rem;
 }
 
-.zero-slot {
-  aspect-ratio: 5 / 3;
-  border-radius: 12px;
-  border: 2px dashed rgba(63, 114, 175, 0.4);
-  background: rgba(255, 255, 255, 0.56);
+.zero-plate-svg {
+  width: 95%;
+  height: auto;
+}
+
+.zero-plate-svg-large {
+  max-height: 100%;
+}
+
+.zero-apple-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.zero-apple {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 1.58rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
+.zero-plate-shadow {
+  fill: rgba(63, 114, 175, 0.14);
+}
+
+.zero-plate-rim {
+  fill: #eef4ff;
+  stroke: rgba(63, 114, 175, 0.55);
+  stroke-width: 2;
+}
+
+.zero-plate-inner {
+  fill: #ffffff;
+  stroke: rgba(63, 114, 175, 0.3);
+  stroke-width: 1.2;
+}
+
+.zero-plate-gloss {
+  fill: rgba(255, 255, 255, 0.75);
 }
 
 .sequence-wrap {
@@ -1218,13 +1260,13 @@ body {
     padding: 0.5rem 0.35rem 0.35rem;
   }
 
-  .zero-slot-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: 280px;
+  .zero-plate-stage {
+    width: min(300px, 100%);
+    border-radius: 14px;
   }
 
-  .zero-slot {
-    border-radius: 10px;
+  .zero-apple {
+    font-size: 1.34rem;
   }
 
   .sequence-line {

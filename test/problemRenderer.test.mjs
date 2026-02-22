@@ -91,15 +91,17 @@ test('ProblemRenderer renders zero-concept visual', () => {
       problem: {
         visual: {
           type: 'zero-concept',
-          count: 0,
-          prompt: '빈 접시에 사과가 몇 개 있나요?'
+          count: 3,
+          prompt: '접시에 사과가 몇 개 있나요?'
         }
       }
     })
   );
 
   assert.equal(markup.includes('zero-concept-wrap'), true);
-  assert.equal(markup.includes('빈 접시에 사과가 몇 개 있나요?'), true);
+  assert.equal(markup.includes('접시에 사과가 몇 개 있나요?'), true);
+  assert.equal(markup.includes('zero-plate-stage'), true);
+  assert.equal((markup.match(/class=\"zero-apple\"/g) || []).length, 3);
 });
 
 test('ProblemRenderer renders sequence visual with prompt', () => {
@@ -253,13 +255,14 @@ test('SimpleBarChart safely handles empty data', () => {
 test('ZeroConcept renders empty slots and captions', () => {
   const markup = renderToStaticMarkup(React.createElement(ZeroConcept, {
     visual: {
-      count: 0,
-      prompt: '빈 접시에 사과가 몇 개 있나요?'
+      count: 2,
+      prompt: '접시에 사과가 몇 개 있나요?'
     }
   }));
 
-  assert.equal(markup.includes('zero-slot-grid'), true);
-  assert.equal(markup.includes('빈 접시에 사과가 몇 개 있나요?'), true);
+  assert.equal(markup.includes('zero-plate-stage'), true);
+  assert.equal(markup.includes('접시에 사과가 몇 개 있나요?'), true);
+  assert.equal((markup.match(/class=\"zero-apple\"/g) || []).length, 2);
 });
 
 test('SequencePrompt exposes provided prompt', () => {

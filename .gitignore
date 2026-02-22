@@ -27,3 +27,4 @@ dist-ssr
 .agent/*
 .agents/*
 .gemini
+_agent

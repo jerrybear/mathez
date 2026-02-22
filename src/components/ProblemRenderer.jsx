@@ -131,15 +131,45 @@ export const MeasurementLength = ({ visual = {} }) => {
 };
 
 export const ZeroConcept = ({ visual = {} }) => {
-  const prompt = String(visual.prompt || '빈 접시에 사과가 몇 개 있나요?');
+  const prompt = String(visual.prompt || '접시에 사과가 몇 개 있나요?');
+  const count = Number.isFinite(Number(visual.count)) ? Math.max(0, Math.round(Number(visual.count))) : 0;
+  const shownCount = Math.min(9, count);
+  const applePositions = [
+    { left: '50%', top: '30%' },
+    { left: '35%', top: '40%' },
+    { left: '65%', top: '40%' },
+    { left: '25%', top: '50%' },
+    { left: '50%', top: '50%' },
+    { left: '75%', top: '50%' },
+    { left: '35%', top: '62%' },
+    { left: '65%', top: '62%' },
+    { left: '50%', top: '70%' }
+  ];
 
   return (
     <div className="zero-concept-wrap">
       <p className="visual-caption">{prompt}</p>
-      <div className="zero-slot-grid">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={`zero-slot-${index}`} className="zero-slot" />
-        ))}
+      <div className="zero-plate-stage" aria-hidden="true">
+        <svg className="zero-plate-svg zero-plate-svg-large" viewBox="0 0 360 210" role="presentation">
+          <ellipse className="zero-plate-shadow" cx="180" cy="138" rx="128" ry="42" />
+          <ellipse className="zero-plate-rim" cx="180" cy="118" rx="138" ry="58" />
+          <ellipse className="zero-plate-inner" cx="180" cy="118" rx="106" ry="40" />
+          <ellipse className="zero-plate-gloss" cx="132" cy="95" rx="34" ry="11" />
+        </svg>
+        <div className="zero-apple-layer">
+          {Array.from({ length: shownCount }).map((_, index) => (
+            <span
+              key={`zero-apple-${index}`}
+              className="zero-apple"
+              style={{
+                left: applePositions[index].left,
+                top: applePositions[index].top
+              }}
+            >
+              🍎
+            </span>
+          ))}
+        </div>
       </div>
       <p className="visual-subtitle">그림을 보고 개수를 숫자로 입력해 보세요.</p>
     </div>

@@ -211,7 +211,8 @@ test('generateProblem honors forced number-basics mode option', () => {
 
   assert.equal(counting.visual?.type, 'count-shapes');
   assert.equal(zero.visual?.type, 'zero-concept');
-  assert.equal(zero.answer, 0);
+  assert.equal(zero.answer, zero.visual?.count);
+  assert.equal(zero.answer >= 0 && zero.answer <= 9, true);
   assert.equal(sequence.visual?.type, 'sequence');
   assert.equal(compare.visual?.type, 'compare');
   assert.equal(compare.visual?.left?.count >= 1, true);

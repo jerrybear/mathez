@@ -356,8 +356,11 @@ const Learning = () => {
     if (!selectedChapter) return;
 
     if (nextIndex >= total) {
+      setIndex(Math.min(nextIndex, total));
+      setScore(nextScore);
       setIsFinished(true);
       setIsCorrect(false);
+      setProblem(null);
       setShowConfetti(true);
       setConfettiPieces(createConfettiPieces());
       syncProgress({
